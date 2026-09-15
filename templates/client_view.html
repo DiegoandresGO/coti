@@ -5,9 +5,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ data.project_title }} — Propuesta Técnico-Comercial ({{ data.quote_number }})</title>
-  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="/static/css/style.css?v=3">
   <style>
     /* Estilos complementarios para la vista interactiva */
+    @media (max-width: 640px) {
+      .hide-xs { display: none; }
+      .plan-detail-card { padding: 16px; }
+      .detail-pill-box { padding: 12px 14px; }
+      #detailPlanPrice { font-size: 20px !important; }
+      .plan-detail-card > div:first-child > div:last-child { text-align: left !important; }
+    }
     .plan-scope-list { list-style: none; padding: 0; margin: 0 0 12px; display: grid; gap: 6px; }
     .plan-scope-list li { position: relative; padding-left: 22px; line-height: 1.45; }
     .plan-scope-list li::before { content: "✔"; position: absolute; left: 0; top: 0; color: var(--emerald-600); font-weight: 800; }
@@ -47,18 +54,18 @@
 <body>
 
   <!-- BARRA SUPERIOR FIJA -->
-  <header class="navbar">
+  <header class="navbar client-navbar">
     <div class="container navbar-inner">
       <a href="#" class="brand-badge">
         <span class="brand-dot"></span>
         <span>{{ data.company_name }}</span>
       </a>
       <div class="nav-actions">
-        <span style="font-size: 13px; color: var(--slate-500); font-weight: 600;">
+        <span class="quote-id-label" style="font-size: 13px; color: var(--slate-500); font-weight: 600;">
           Propuesta N°: <strong style="color: var(--primary);">{{ data.quote_number }}</strong>
         </span>
         <a id="navPdfBtn" href="/api/cotizaciones/{{ data.quote_number }}/pdf?plan_index={{ sel_idx }}" target="_blank" class="btn btn-primary btn-sm">
-          📥 Descargar PDF Oficial
+          📥 <span class="hide-xs">Descargar </span>PDF
         </a>
       </div>
     </div>
@@ -102,7 +109,7 @@
         <h2 class="section-title">Módulos de Alcance Funcional</h2>
       </div>
       <div class="table-responsive">
-        <table class="data-table">
+        <table class="data-table stack-mobile">
           <thead>
             <tr>
               <th style="width: 28%;">Módulo / Componente</th>
@@ -224,7 +231,7 @@
         </div>
 
         <div class="table-responsive">
-          <table class="data-table" style="text-align: center;">
+          <table class="data-table compare-table" style="text-align: center;">
             <thead>
               <tr>
                 <th style="text-align: left; width: 34%;">Característica / Servicio</th>
@@ -292,7 +299,7 @@
         <h2 class="section-title">Servicios Complementarios y Bolsa de Horas</h2>
       </div>
       <div class="table-responsive">
-        <table class="data-table">
+        <table class="data-table stack-mobile">
           <thead>
             <tr>
               <th style="width: 30%;">Concepto</th>
@@ -365,7 +372,7 @@
       </p>
 
       <div class="table-responsive" style="margin-bottom: 20px;">
-        <table class="data-table">
+        <table class="data-table stack-mobile">
           <thead>
             <tr>
               <th style="width: 25%;">Hito de Pago</th>
@@ -437,13 +444,13 @@
   <div class="floating-action-bar">
     <div class="floating-action-inner">
       <div class="floating-kpi-text">
-        Plan Seleccionado: <strong id="floatingPlanText">Opción 2 — Plan Estándar Profesional</strong> 
-        <span style="color: var(--slate-400); margin: 0 6px;">|</span> 
-        Total: <strong id="floatingTotalText" style="color: #67E8F9;">$ 4.000.000 COP</strong>
+        <span class="kpi-label">Plan Seleccionado: </span><strong id="floatingPlanText">Opción 2 — Plan Estándar Profesional</strong> 
+        <span class="kpi-sep" style="color: var(--slate-400); margin: 0 6px;">|</span> 
+        <span class="kpi-label">Total: </span> <strong id="floatingTotalText" style="color: #67E8F9;">$ 4.000.000 COP</strong>
       </div>
-      <div style="display: flex; gap: 10px;">
+      <div style="display: flex; gap: 10px; flex-wrap: nowrap;">
         <a id="floatingPdfBtn" href="/api/cotizaciones/{{ data.quote_number }}/pdf?plan_index={{ sel_idx }}" target="_blank" class="btn btn-primary btn-sm">
-          📥 Descargar PDF con este Plan
+          📥 <span class="hide-xs">Descargar </span>PDF<span class="hide-xs"> con este Plan</span>
         </a>
       </div>
     </div>
@@ -536,6 +543,7 @@
         rowNeto.parentNode.insertBefore(tr, rowNeto);
       });
       document.getElementById('rowNetoVal').textContent = formatCOP(netoVal);
+      labelStackTables();
 
       // 4. Actualizar Barra Flotante
       document.getElementById('floatingPlanText').textContent = plan.num + ' (' + plan.name + ')';
@@ -577,7 +585,20 @@
 
 
     // Inicializar al cargar
+    // En móvil las tablas se muestran como tarjetas: cada celda toma el título de su columna
+    function labelStackTables() {
+      document.querySelectorAll('.data-table.stack-mobile').forEach(table => {
+        const heads = [...table.querySelectorAll('thead th')].map(th => th.textContent.trim());
+        table.querySelectorAll('tbody tr').forEach(tr => {
+          [...tr.children].forEach((td, i) => {
+            if (heads[i] && !td.hasAttribute('data-label')) td.setAttribute('data-label', heads[i]);
+          });
+        });
+      });
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
+      labelStackTables();
       selectPlan(currentSelectedIndex);
     });
   </script>
