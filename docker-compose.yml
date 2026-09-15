@@ -3,12 +3,24 @@ services:
     build: .
     container_name: cotizaciones
     restart: unless-stopped
-    ports:
-      - "8000:8000"
     env_file:
       - .env
     volumes:
       - cotizaciones_data:/app/data
+    networks:
+      - traefik-net
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-net
+      - traefik.http.routers.coti-barcam.rule=Host(`coti.barcam.site`)
+      - traefik.http.routers.coti-barcam.entrypoints=websecure
+      - traefik.http.routers.coti-barcam.tls=true
+      - traefik.http.routers.coti-barcam.tls.certresolver=mytlschallenge
+      - traefik.http.services.coti-barcam.loadbalancer.server.port=8000
 
 volumes:
   cotizaciones_data:
+
+networks:
+  traefik-net:
+    external: true
