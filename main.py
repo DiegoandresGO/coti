@@ -215,14 +215,14 @@ async def select_plan(quote_id: str, payload: dict):
     """
     PÚBLICO: Permite al cliente seleccionar su plan preferido sin requerir login.
     """
-    plan_index = payload.get("plan_index", 1)
-    data = storage.get_quotation(quote_id)
-    if not data:
+    try:
+        plan_index = int(payload.get("plan_index", 0))
+    except (TypeError, ValueError):
+        plan_index = -1
+    result = storage.set_selected_plan(quote_id, plan_index)
+    if result is None:
         raise HTTPException(status_code=404, detail="Cotización no encontrada")
-    
-    if 0 <= plan_index < len(data.get("plans", [])):
-        data["selected_plan_index"] = plan_index
-        storage.save_quotation(data)
+    if result:
         return {"status": "ok", "selected_plan_index": plan_index}
     return {"status": "error", "message": "Índice de plan inválido"}
 

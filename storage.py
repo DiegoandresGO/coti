@@ -1,10 +1,16 @@
 import json
 import os
+import sqlite3
+import threading
 from datetime import datetime
 
 STORAGE_FILE = os.environ.get(
     "STORAGE_FILE",
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "cotizaciones_db.json")
+)
+DATABASE_FILE = os.environ.get(
+    "DATABASE_FILE",
+    os.path.join(os.path.dirname(STORAGE_FILE), "cotizaciones.db")
 )
 
 DEFAULT_PROPOSAL = {
@@ -107,43 +113,104 @@ DEFAULT_PROPOSAL = {
 }
 
 
-def _load_db():
-    if not os.path.exists(STORAGE_FILE):
-        initial_data = {"COT-2026-001": DEFAULT_PROPOSAL}
-        _save_db(initial_data)
-        return initial_data
-    try:
-        with open(STORAGE_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return {"COT-2026-001": DEFAULT_PROPOSAL}
+# ==========================================
+# BASE DE DATOS SQLITE
+# ==========================================
+_lock = threading.Lock()
+_initialized = False
 
 
-def _save_db(data):
-    os.makedirs(os.path.dirname(STORAGE_FILE) or ".", exist_ok=True)
-    with open(STORAGE_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+def _connect():
+    os.makedirs(os.path.dirname(DATABASE_FILE) or ".", exist_ok=True)
+    conn = sqlite3.connect(DATABASE_FILE, timeout=30)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=30000")
+    return conn
+
+
+def _now():
+    return datetime.now().isoformat(timespec="seconds")
+
+
+def init_db():
+    """Crea la tabla y migra una sola vez las cotizaciones del JSON antiguo."""
+    global _initialized
+    if _initialized:
+        return
+    with _lock:
+        if _initialized:
+            return
+        with _connect() as conn:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS quotations (
+                    id          TEXT PRIMARY KEY COLLATE NOCASE,
+                    data        TEXT NOT NULL,
+                    created_at  TEXT NOT NULL,
+                    updated_at  TEXT NOT NULL
+                )
+            """)
+            empty = conn.execute("SELECT COUNT(*) FROM quotations").fetchone()[0] == 0
+            if empty:
+                legacy = {}
+                if os.path.exists(STORAGE_FILE):
+                    try:
+                        with open(STORAGE_FILE, "r", encoding="utf-8") as f:
+                            legacy = json.load(f)
+                    except Exception:
+                        legacy = {}
+                if not legacy:
+                    legacy = {DEFAULT_PROPOSAL["quote_number"]: DEFAULT_PROPOSAL}
+                now = _now()
+                conn.executemany(
+                    "INSERT OR IGNORE INTO quotations (id, data, created_at, updated_at) VALUES (?, ?, ?, ?)",
+                    [(q_id, json.dumps(q, ensure_ascii=False), now, now) for q_id, q in legacy.items()]
+                )
+                if os.path.exists(STORAGE_FILE):
+                    try:
+                        os.replace(STORAGE_FILE, STORAGE_FILE + ".migrado")
+                    except OSError:
+                        pass
+        _initialized = True
 
 
 def get_quotation(quote_id: str):
-    db = _load_db()
-    # Búsqueda insensible a mayúsculas
-    for q_id, q_data in db.items():
-        if q_id.upper() == quote_id.upper():
-            return q_data
-    return None
+    init_db()
+    with _connect() as conn:
+        row = conn.execute("SELECT data FROM quotations WHERE id = ?", (quote_id.strip(),)).fetchone()
+    return json.loads(row["data"]) if row else None
 
 
 def save_quotation(data: dict) -> str:
-    db = _load_db()
-    quote_id = data.get("quote_number", "").strip()
-    if not quote_id:
-        quote_id = f"COT-{datetime.today().strftime('%Y%m%d')}-{len(db)+1:02d}"
-        data["quote_number"] = quote_id
-    
-    db[quote_id] = data
-    _save_db(db)
+    init_db()
+    with _lock, _connect() as conn:
+        quote_id = str(data.get("quote_number", "")).strip()
+        if not quote_id:
+            count = conn.execute("SELECT COUNT(*) FROM quotations").fetchone()[0]
+            quote_id = f"COT-{datetime.today().strftime('%Y%m%d')}-{count + 1:02d}"
+            data["quote_number"] = quote_id
+        now = _now()
+        conn.execute("""
+            INSERT INTO quotations (id, data, created_at, updated_at) VALUES (?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at
+        """, (quote_id, json.dumps(data, ensure_ascii=False), now, now))
     return quote_id
+
+
+def set_selected_plan(quote_id: str, plan_index: int):
+    """Actualiza solo el plan elegido por el cliente, sin pisar otros cambios."""
+    init_db()
+    with _lock, _connect() as conn:
+        row = conn.execute("SELECT data FROM quotations WHERE id = ?", (quote_id.strip(),)).fetchone()
+        if not row:
+            return None
+        data = json.loads(row["data"])
+        if not 0 <= plan_index < len(data.get("plans", [])):
+            return False
+        data["selected_plan_index"] = plan_index
+        conn.execute("UPDATE quotations SET data = ?, updated_at = ? WHERE id = ?",
+                     (json.dumps(data, ensure_ascii=False), _now(), quote_id.strip()))
+    return True
 
 
 def plan_items(features) -> list:
@@ -195,11 +262,14 @@ def _selected_plan(q_data: dict) -> dict:
 
 
 def list_quotations():
-    db = _load_db()
+    init_db()
+    with _connect() as conn:
+        rows = conn.execute("SELECT id, data FROM quotations ORDER BY updated_at DESC, rowid DESC").fetchall()
     summary = []
-    for q_id, q_data in db.items():
+    for row in rows:
+        q_data = json.loads(row["data"])
         summary.append({
-            "id": q_id,
+            "id": row["id"],
             "project_title": q_data.get("project_title", "Sin título"),
             "client_name": q_data.get("client_name", "Cliente"),
             "client_company": q_data.get("client_company", ""),

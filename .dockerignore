@@ -12,3 +12,6 @@ app.py
 requirements-streamlit.txt
 Dockerfile
 docker-compose.yml
+cotizaciones.db
+cotizaciones.db-*
+*.migrado

@@ -6,3 +6,6 @@ venv/
 .claude/
 # Datos reales de cotizaciones (se crea solo al iniciar)
 cotizaciones_db.json
+cotizaciones.db
+cotizaciones.db-*
+*.migrado
