@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Panel de Cotizaciones — Administración</title>
-  <link rel="stylesheet" href="/static/css/style.css?v=3">
+  <link rel="stylesheet" href="/static/css/style.css?v=4">
   <style>
     @media (max-width: 640px) { .hide-xs { display: none; } }
   </style>
@@ -25,7 +25,7 @@
         <a id="navClientPortalLink" href="/cotizacion/{{ initial_data.quote_number }}" target="_blank" class="btn btn-secondary btn-sm" style="border-color: var(--primary); color: var(--primary); font-weight: 700;">
           🌐 Vista del Cliente
         </a>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="loadPreset()">🔄 Cargar MyFinces</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="newQuotation()">➕ Nueva</button>
         <button type="button" class="btn btn-primary btn-sm" onclick="saveQuotation()">💾 Guardar Cotización</button>
         <a href="/logout" class="btn btn-secondary btn-sm" style="border-color: var(--rose-200); color: var(--rose-700); font-weight: 700;" title="Cerrar sesión administrativa">
           🚪 Salir
@@ -51,6 +51,44 @@
           <a id="btnClientView" href="#" target="_blank" class="btn btn-secondary btn-sm">🌐 Ver como Cliente</a>
           <a id="btnPdfDownload" href="#" target="_blank" class="btn btn-primary btn-sm">📥 Descargar PDF</a>
         </div>
+      </div>
+    </div>
+
+
+    <!-- LISTADO DE COTIZACIONES -->
+    <div class="card" id="quotesCard">
+      <div class="section-header" style="justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+        <h2 class="section-title">📁 Mis Cotizaciones <span id="quotesCount" style="font-size: 13px; color: var(--slate-500); font-weight: 600;"></span></h2>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <input type="search" id="quotesSearch" class="form-control" placeholder="Buscar cliente, número o proyecto…" oninput="renderQuotesList()" style="min-width: 0; width: 240px; max-width: 100%;">
+          <button type="button" class="btn btn-primary btn-sm" onclick="newQuotation()">➕ Nueva Cotización</button>
+        </div>
+      </div>
+      <div class="table-responsive" style="max-height: 340px; overflow-y: auto;">
+        <table class="data-table stack-mobile" id="quotesTable">
+          <thead>
+            <tr>
+              <th>N° Cotización</th>
+              <th>Cliente</th>
+              <th>Proyecto</th>
+              <th>Total Plan</th>
+              <th style="text-align: right;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="quotesTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- INDICADOR DE EDICIÓN -->
+    <div id="editingBar" class="card" style="padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; border-left: 4px solid var(--primary);">
+      <div style="font-size: 14px;">
+        <span id="editingLabel" style="font-weight: 800; color: var(--slate-900);"></span>
+        <span id="editingSub" style="color: var(--slate-500); font-size: 13px;"></span>
+      </div>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <button type="button" class="btn btn-secondary btn-sm" id="btnDuplicate" onclick="duplicateQuotation()">📄 Duplicar</button>
+        <button type="button" class="btn btn-primary btn-sm" onclick="saveQuotation()">💾 Guardar</button>
       </div>
     </div>
 
@@ -282,7 +320,7 @@
             <div class="grid-2">
               <div class="form-group">
                 <label class="form-label">N° de Cotización</label>
-                <input type="text" id="quote_number" class="form-control">
+                <input type="text" id="quote_number" class="form-control" placeholder="Se asigna automáticamente">
               </div>
               <div class="form-group">
                 <label class="form-label">Vigencia</label>
@@ -508,7 +546,8 @@
         company_lead: document.getElementById('company_lead').value,
         company_contact: document.getElementById('company_contact').value,
         
-        quote_number: document.getElementById('quote_number').value,
+        original_id: editingId,
+        quote_number: document.getElementById('quote_number').value.trim(),
         quote_date: currentProposal.quote_date || new Date().toLocaleDateString('es-CO'),
         quote_validity: document.getElementById('quote_validity').value,
 
@@ -562,17 +601,16 @@
 
         const res = await resp.json();
         if (res.status === 'ok') {
+          delete data.original_id;
+          data.quote_number = res.quote_id;
           currentProposal = data;
-          const shareUrl = window.location.origin + '/cotizacion/' + res.quote_id;
-          
-          document.getElementById('shareBanner').style.display = 'block';
-          document.getElementById('shareUrlText').textContent = shareUrl;
-          document.getElementById('btnClientView').href = '/cotizacion/' + res.quote_id;
-          document.getElementById('btnPdfDownload').href = '/api/cotizaciones/' + res.quote_id + '/pdf';
-          
+          setEditing(res.quote_id);
+          document.getElementById('quote_number').value = res.quote_id;
+          showShareBanner(res.quote_id);
+          await refreshQuotesList();
           window.scrollTo({ top: 0, behavior: 'smooth' });
         } else {
-          alert('Error: ' + (res.detail || res.message || 'No se pudo guardar'));
+          alert('⚠️ ' + (res.detail || res.message || 'No se pudo guardar'));
         }
       } catch (err) {
         alert('Error al guardar la cotización: ' + err.message);
@@ -589,6 +627,165 @@
       }
     }
 
+    // ==========================================
+    // GESTIÓN DE VARIAS COTIZACIONES
+    // ==========================================
+    let quotesList = {{ quotes_list | tojson }};
+    let editingId = '';
+
+    function formatCOP(v) {
+      return '$ ' + Math.round(parseFloat(v) || 0).toLocaleString('es-CO') + ' COP';
+    }
+
+    function escapeHtml(v) {
+      return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function setEditing(id) {
+      editingId = id || '';
+      const label = document.getElementById('editingLabel');
+      const sub = document.getElementById('editingSub');
+      if (editingId) {
+        label.textContent = '✏️ Editando ' + editingId;
+        sub.textContent = ' · los cambios se guardan sobre esta cotización';
+        history.replaceState(null, '', '/?id=' + encodeURIComponent(editingId));
+        document.getElementById('navClientPortalLink').href = '/cotizacion/' + encodeURIComponent(editingId);
+      } else {
+        label.textContent = '🆕 Nueva cotización (sin guardar)';
+        sub.textContent = ' · se creará al presionar Guardar';
+        history.replaceState(null, '', '/');
+        document.getElementById('shareBanner').style.display = 'none';
+      }
+      document.getElementById('btnDuplicate').disabled = !editingId;
+      renderQuotesList();
+    }
+
+    function renderQuotesList() {
+      const tbody = document.getElementById('quotesTbody');
+      const q = (document.getElementById('quotesSearch').value || '').toLowerCase().trim();
+      const rows = quotesList.filter(x => !q || [x.id, x.client_name, x.client_company, x.project_title]
+        .some(v => String(v || '').toLowerCase().includes(q)));
+      document.getElementById('quotesCount').textContent = `(${quotesList.length})`;
+      if (!rows.length) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--slate-500);">${quotesList.length ? 'Sin resultados' : 'Aún no hay cotizaciones'}</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = rows.map(x => {
+        const active = editingId && x.id.toUpperCase() === editingId.toUpperCase();
+        const id = encodeURIComponent(x.id);
+        return `<tr style="${active ? 'outline: 2px solid var(--primary); outline-offset: -2px;' : ''}">
+          <td><strong style="color: var(--primary);">${escapeHtml(x.id)}</strong>${active ? ' <span style="font-size: 11px; color: var(--primary);">(abierta)</span>' : ''}<br><span style="font-size: 12px; color: var(--slate-500);">${escapeHtml(x.quote_date)}</span></td>
+          <td><strong>${escapeHtml(x.client_name || '—')}</strong><br><span style="font-size: 12px; color: var(--slate-500);">${escapeHtml(x.client_company)}</span></td>
+          <td>${escapeHtml(x.project_title)}</td>
+          <td><strong>${formatCOP(x.total)}</strong></td>
+          <td style="text-align: right;">
+            <div style="display: inline-flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end;">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="openQuotation(decodeURIComponent('${id}'))">✏️ Editar</button>
+              <a class="btn btn-secondary btn-sm" href="/cotizacion/${id}" target="_blank">🌐 Ver</a>
+              <a class="btn btn-secondary btn-sm" href="/api/cotizaciones/${id}/pdf" target="_blank">📥 PDF</a>
+              <button type="button" class="btn btn-secondary btn-sm" style="color: var(--rose-700);" onclick="deleteQuotation(decodeURIComponent('${id}'))">🗑️</button>
+            </div>
+          </td>
+        </tr>`;
+      }).join('');
+      labelStackTables();
+    }
+
+    function labelStackTables() {
+      document.querySelectorAll('.data-table.stack-mobile').forEach(table => {
+        const heads = [...table.querySelectorAll('thead th')].map(th => th.textContent.trim());
+        table.querySelectorAll('tbody tr').forEach(tr => {
+          [...tr.children].forEach((td, i) => { if (heads[i] && td.colSpan === 1) td.setAttribute('data-label', heads[i]); });
+        });
+      });
+    }
+
+    async function refreshQuotesList() {
+      try {
+        const resp = await fetch('/api/cotizaciones');
+        if (resp.ok) quotesList = await resp.json();
+      } catch (e) {}
+      renderQuotesList();
+    }
+
+    function confirmDiscard() {
+      return confirm('¿Continuar? Los cambios que no hayas guardado en la cotización abierta se perderán.');
+    }
+
+    async function openQuotation(id) {
+      if (editingId && editingId.toUpperCase() === id.toUpperCase()) return;
+      if (!confirmDiscard()) return;
+      const resp = await fetch('/api/cotizaciones/' + encodeURIComponent(id));
+      if (!resp.ok) { alert('No se encontró la cotización ' + id); return refreshQuotesList(); }
+      const data = await resp.json();
+      currentProposal = data;
+      populateForm(data);
+      setEditing(data.quote_number);
+      showShareBanner(data.quote_number);
+      switchTab('tabScope');
+      document.getElementById('editingBar').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    async function newQuotation() {
+      if (!confirmDiscard()) return;
+      const resp = await fetch('/api/cotizaciones/nueva');
+      if (resp.status === 401) { window.location.href = '/login?next=/'; return; }
+      const data = await resp.json();
+      currentProposal = data;
+      populateForm(data);
+      setEditing('');
+      switchTab('tabMeta');
+      document.getElementById('editingBar').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setTimeout(() => document.getElementById('client_name').focus(), 400);
+    }
+
+    async function duplicateQuotation() {
+      if (!editingId) return;
+      const data = collectData();
+      const resp = await fetch('/api/cotizaciones/nueva');
+      if (resp.status === 401) { window.location.href = '/login?next=/'; return; }
+      const tpl = await resp.json();
+      delete data.original_id;
+      data.quote_number = tpl.quote_number;
+      data.quote_date = tpl.quote_date;
+      currentProposal = data;
+      populateForm(data);
+      setEditing('');
+      document.getElementById('editingLabel').textContent = '📄 Copia de ' + (tpl.quote_number ? 'cotización' : '') + ' (sin guardar)';
+      alert('Se creó una copia con el número ' + tpl.quote_number + '. Ajusta los datos del cliente y presiona Guardar.');
+      switchTab('tabMeta');
+    }
+
+    async function deleteQuotation(id) {
+      if (!confirm(`¿Eliminar la cotización ${id}?\n\nEl enlace del cliente dejará de funcionar. Esta acción no se puede deshacer.`)) return;
+      const resp = await fetch('/api/cotizaciones/' + encodeURIComponent(id), { method: 'DELETE' });
+      if (resp.status === 401) { window.location.href = '/login?next=/'; return; }
+      if (!resp.ok) { alert('No se pudo eliminar la cotización.'); }
+      const wasOpen = editingId && editingId.toUpperCase() === id.toUpperCase();
+      await refreshQuotesList();
+      if (wasOpen) {
+        editingId = '';
+        if (quotesList.length) { await openQuotationForce(quotesList[0].id); }
+        else { const r = await fetch('/api/cotizaciones/nueva'); const d = await r.json(); currentProposal = d; populateForm(d); setEditing(''); }
+      }
+    }
+
+    async function openQuotationForce(id) {
+      const resp = await fetch('/api/cotizaciones/' + encodeURIComponent(id));
+      if (!resp.ok) return;
+      const data = await resp.json();
+      currentProposal = data; populateForm(data); setEditing(data.quote_number); showShareBanner(data.quote_number);
+    }
+
+    function showShareBanner(id) {
+      if (!id) return;
+      const enc = encodeURIComponent(id);
+      document.getElementById('shareBanner').style.display = 'block';
+      document.getElementById('shareUrlText').textContent = window.location.origin + '/cotizacion/' + enc;
+      document.getElementById('btnClientView').href = '/cotizacion/' + enc;
+      document.getElementById('btnPdfDownload').href = '/api/cotizaciones/' + enc + '/pdf';
+    }
+
     function copyShareUrl() {
       const url = document.getElementById('shareUrlText').textContent;
       navigator.clipboard.writeText(url).then(() => {
@@ -599,14 +796,9 @@
     // Inicialización al cargar la página
     document.addEventListener('DOMContentLoaded', () => {
       populateForm(currentProposal);
-      // Si ya hay un N° de cotización, mostrar banner
-      if (currentProposal.quote_number) {
-        const shareUrl = window.location.origin + '/cotizacion/' + currentProposal.quote_number;
-        document.getElementById('shareBanner').style.display = 'block';
-        document.getElementById('shareUrlText').textContent = shareUrl;
-        document.getElementById('btnClientView').href = '/cotizacion/' + currentProposal.quote_number;
-        document.getElementById('btnPdfDownload').href = '/api/cotizaciones/' + currentProposal.quote_number + '/pdf';
-      }
+      const exists = quotesList.some(x => x.id.toUpperCase() === String(currentProposal.quote_number || '').toUpperCase());
+      setEditing(exists ? currentProposal.quote_number : '');
+      if (exists) showShareBanner(currentProposal.quote_number);
     });
   </script>
 </body>

@@ -111,15 +111,16 @@ async def logout():
 # ==========================================
 
 @app.get("/", response_class=HTMLResponse)
-async def admin_dashboard(request: Request):
+async def admin_dashboard(request: Request, id: str = ""):
     """Panel de administración y creación de cotizaciones (SOLO ADMINS)."""
     if not is_admin_authenticated(request):
         return RedirectResponse(url="/login?next=/", status_code=303)
 
-    # Obtener la cotización más reciente o la predeterminada
+    # Abrir la cotización pedida (?id=...) o la más reciente
     quotes = storage.list_quotations()
-    initial_id = quotes[0]["id"] if quotes else "COT-2026-001"
-    initial_data = storage.get_quotation(initial_id) or storage.DEFAULT_PROPOSAL
+    initial_data = storage.get_quotation(id) if id else None
+    if not initial_data:
+        initial_data = storage.get_quotation(quotes[0]["id"]) if quotes else storage.DEFAULT_PROPOSAL
     
     return templates.TemplateResponse(request, "admin.html", {
         "initial_data": initial_data,
@@ -170,6 +171,35 @@ async def list_all_quotes(request: Request):
     return storage.list_quotations()
 
 
+@app.get("/api/cotizaciones/nueva")
+async def new_quote_template(request: Request):
+    """Plantilla para una cotización nueva, con el siguiente número disponible (requiere admin)."""
+    if not is_admin_authenticated(request):
+        raise HTTPException(status_code=401, detail="No autorizado")
+    import copy
+    from datetime import datetime
+    data = copy.deepcopy(storage.DEFAULT_PROPOSAL)
+    data.update({
+        "quote_number": storage.next_quote_number(),
+        "quote_date": datetime.today().strftime("%d/%m/%Y"),
+        "client_name": "",
+        "client_company": "",
+        "client_contact": "",
+    })
+    data.pop("selected_plan_index", None)
+    return data
+
+
+@app.delete("/api/cotizaciones/{quote_id}")
+async def delete_quote(request: Request, quote_id: str):
+    """Elimina una cotización (requiere admin)."""
+    if not is_admin_authenticated(request):
+        raise HTTPException(status_code=401, detail="No autorizado")
+    if not storage.delete_quotation(quote_id):
+        raise HTTPException(status_code=404, detail="Cotización no encontrada")
+    return {"status": "ok"}
+
+
 @app.get("/api/cotizaciones/{quote_id}")
 async def get_quote_data(quote_id: str):
     """Datos en formato JSON de una cotización específica."""
@@ -194,15 +224,31 @@ async def save_quote(request: Request, payload: dict):
     plans = payload.get("plans") or []
     if not plans:
         raise HTTPException(status_code=400, detail="La cotización debe tener al menos 1 plan.")
+    # original_id: número con el que se abrió la cotización en el panel ("" si es nueva)
+    original_id = str(payload.pop("original_id", "") or "").strip()
+    quote_number = str(payload.get("quote_number", "") or "").strip()
+    payload["quote_number"] = quote_number
+    is_rename = bool(original_id) and quote_number and quote_number.upper() != original_id.upper()
+
+    # Evitar sobrescribir otra cotización por usar un número que ya existe
+    if quote_number and storage.quotation_exists(quote_number) and (not original_id or is_rename):
+        raise HTTPException(
+            status_code=409,
+            detail=f"Ya existe una cotización con el número {quote_number}. Usa otro número o ábrela desde el listado para editarla."
+        )
+
     # El plan seleccionado lo elige el cliente en su vista; el admin no lo define.
     # Se conserva la elección previa del cliente; si no hay, se usa el plan recomendado (o el primero).
-    existing = storage.get_quotation(payload.get("quote_number", "").strip() or "") or {}
+    existing = storage.get_quotation(original_id or quote_number or "") or {}
     sel = existing.get("selected_plan_index")
     if not isinstance(sel, int) or not 0 <= sel < len(plans):
         sel = next((i for i, p in enumerate(plans) if p.get("is_recommended")), 0)
     payload["selected_plan_index"] = sel
 
-    quote_id = storage.save_quotation(payload)
+    if is_rename and storage.quotation_exists(original_id):
+        quote_id = storage.rename_quotation(original_id, payload)
+    else:
+        quote_id = storage.save_quotation(payload)
     return {
         "status": "ok",
         "quote_id": quote_id,

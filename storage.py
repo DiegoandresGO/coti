@@ -186,8 +186,7 @@ def save_quotation(data: dict) -> str:
     with _lock, _connect() as conn:
         quote_id = str(data.get("quote_number", "")).strip()
         if not quote_id:
-            count = conn.execute("SELECT COUNT(*) FROM quotations").fetchone()[0]
-            quote_id = f"COT-{datetime.today().strftime('%Y%m%d')}-{count + 1:02d}"
+            quote_id = _next_quote_number(conn)
             data["quote_number"] = quote_id
         now = _now()
         conn.execute("""
@@ -195,6 +194,47 @@ def save_quotation(data: dict) -> str:
             ON CONFLICT(id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at
         """, (quote_id, json.dumps(data, ensure_ascii=False), now, now))
     return quote_id
+
+
+def _next_quote_number(conn) -> str:
+    """Siguiente consecutivo del año: COT-2026-001, COT-2026-002, ..."""
+    prefix = f"COT-{datetime.today().year}-"
+    max_seq = 0
+    for (q_id,) in conn.execute("SELECT id FROM quotations WHERE id LIKE ?", (prefix + "%",)):
+        tail = q_id[len(prefix):]
+        if tail.isdigit():
+            max_seq = max(max_seq, int(tail))
+    return f"{prefix}{max_seq + 1:03d}"
+
+
+def next_quote_number() -> str:
+    init_db()
+    with _connect() as conn:
+        return _next_quote_number(conn)
+
+
+def quotation_exists(quote_id: str) -> bool:
+    return get_quotation(quote_id) is not None
+
+
+def delete_quotation(quote_id: str) -> bool:
+    init_db()
+    with _lock, _connect() as conn:
+        cur = conn.execute("DELETE FROM quotations WHERE id = ?", (quote_id.strip(),))
+        return cur.rowcount > 0
+
+
+def rename_quotation(old_id: str, data: dict) -> str:
+    """Guarda con un número nuevo y elimina el anterior en una sola operación."""
+    init_db()
+    new_id = str(data.get("quote_number", "")).strip()
+    with _lock, _connect() as conn:
+        row = conn.execute("SELECT created_at FROM quotations WHERE id = ?", (old_id.strip(),)).fetchone()
+        created = row["created_at"] if row else _now()
+        conn.execute("DELETE FROM quotations WHERE id = ?", (old_id.strip(),))
+        conn.execute("INSERT INTO quotations (id, data, created_at, updated_at) VALUES (?, ?, ?, ?)",
+                     (new_id, json.dumps(data, ensure_ascii=False), created, _now()))
+    return new_id
 
 
 def set_selected_plan(quote_id: str, plan_index: int):
@@ -274,6 +314,7 @@ def list_quotations():
             "client_name": q_data.get("client_name", "Cliente"),
             "client_company": q_data.get("client_company", ""),
             "quote_date": q_data.get("quote_date", ""),
+            "neto": compute_totals(q_data, float(_selected_plan(q_data).get("price", 0) or 0))["neto"],
             "total": _selected_plan(q_data).get("price", 0)
         })
     return summary
