@@ -177,8 +177,13 @@ def init_db():
 def get_quotation(quote_id: str):
     init_db()
     with _connect() as conn:
-        row = conn.execute("SELECT data FROM quotations WHERE id = ?", (quote_id.strip(),)).fetchone()
-    return json.loads(row["data"]) if row else None
+        row = conn.execute("SELECT id, data FROM quotations WHERE id = ?", (quote_id.strip(),)).fetchone()
+    if not row:
+        return None
+    data = json.loads(row["data"])
+    # El número guardado dentro de los datos siempre coincide con el registro
+    data["quote_number"] = row["id"]
+    return data
 
 
 def save_quotation(data: dict) -> str:
