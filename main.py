@@ -64,8 +64,7 @@ async def login_page(request: Request, next: str = "/"):
     if is_admin_authenticated(request):
         return RedirectResponse(url=next if next.startswith("/") else "/", status_code=303)
     
-    return templates.TemplateResponse("login.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "login.html", {
         "next_url": next,
         "error": None
     })
@@ -93,8 +92,7 @@ async def login_submit(request: Request):
         )
         return response
 
-    return templates.TemplateResponse("login.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "login.html", {
         "next_url": next_url,
         "error": "Credenciales inválidas. Verifica tu usuario y contraseña de administrador."
     }, status_code=401)
@@ -123,8 +121,7 @@ async def admin_dashboard(request: Request):
     initial_id = quotes[0]["id"] if quotes else "COT-2026-001"
     initial_data = storage.get_quotation(initial_id) or storage.DEFAULT_PROPOSAL
     
-    return templates.TemplateResponse("admin.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "admin.html", {
         "initial_data": initial_data,
         "quotes_list": quotes,
         "admin_user": ADMIN_USERNAME
@@ -150,8 +147,7 @@ async def client_view(request: Request, quote_id: str):
     if not data:
         raise HTTPException(status_code=404, detail=f"Cotización {quote_id} no encontrada")
     
-    return templates.TemplateResponse("client_view.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "client_view.html", {
         "data": data
     })
 
