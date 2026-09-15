@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel de Cotizaciones — Administración</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+  <!-- NAVBAR ADMIN -->
+  <header class="navbar">
+    <div class="admin-container navbar-inner">
+      <a href="/" class="brand-badge">
+        <span class="brand-dot"></span>
+        <span>Cotizador Pro · Panel de Gestión</span>
+      </a>
+      <div class="nav-actions">
+        <span style="font-size: 12px; color: var(--slate-500); font-weight: 700; background: var(--slate-100); padding: 5px 10px; border-radius: var(--radius-sm); border: 1px solid var(--slate-200);">
+          👤 Admin: <strong style="color: var(--primary);">{{ admin_user|default('admin') }}</strong>
+        </span>
+        <a id="navClientPortalLink" href="/cotizacion/{{ initial_data.quote_number }}" target="_blank" class="btn btn-secondary btn-sm" style="border-color: var(--primary); color: var(--primary); font-weight: 700;">
+          🌐 Vista del Cliente (Portal Interactivo)
+        </a>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="loadPreset()">🔄 Cargar MyFinces</button>
+        <button type="button" class="btn btn-primary btn-sm" onclick="saveQuotation()">💾 Guardar Cotización</button>
+        <a href="/logout" class="btn btn-secondary btn-sm" style="border-color: var(--rose-200); color: var(--rose-700); font-weight: 700;" title="Cerrar sesión administrativa">
+          🚪 Salir
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="admin-container">
+
+    <!-- BANNER DE ENLACE COMPARTIBLE (Generado dinámicamente) -->
+    <div id="shareBanner" class="card" style="display: none; background: linear-gradient(135deg, #EEF2FF 0%, #FFFFFF 100%); border: 1.5px solid var(--primary-border); margin-bottom: 24px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+        <div>
+          <div style="display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; color: var(--emerald-700); background: var(--emerald-50); border: 1px solid var(--emerald-100); padding: 3px 8px; border-radius: 4px; margin-bottom: 6px;">
+            ✔ COTIZACIÓN GUARDADA Y LISTA PARA ENVIAR
+          </div>
+          <h3 style="font-size: 17px; font-weight: 800; color: var(--slate-900);">Enlace Público para el Cliente:</h3>
+          <p id="shareUrlText" style="font-size: 13.5px; color: var(--primary); font-family: monospace; font-weight: 700; margin-top: 4px;"></p>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="copyShareUrl()">📋 Copiar Enlace</button>
+          <a id="btnClientView" href="#" target="_blank" class="btn btn-secondary btn-sm">🌐 Ver como Cliente</a>
+          <a id="btnPdfDownload" href="#" target="_blank" class="btn btn-primary btn-sm">📥 Descargar PDF</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- PESTAÑAS DE CONFIGURACIÓN -->
+    <div class="tabs-header">
+      <button type="button" class="tab-btn active" onclick="switchTab('tabScope')">🎯 1. Alcance & Módulos</button>
+      <button type="button" class="tab-btn" onclick="switchTab('tabPlans')">💰 2. Planes & Precios</button>
+      <button type="button" class="tab-btn" onclick="switchTab('tabLimits')">📋 3. Exclusiones & Limitantes</button>
+      <button type="button" class="tab-btn" onclick="switchTab('tabPayments')">💳 4. Pagos & Facturación</button>
+      <button type="button" class="tab-btn" onclick="switchTab('tabMeta')">🏢 5. Emisor & Cliente</button>
+    </div>
+
+    <form id="quoteForm" onsubmit="event.preventDefault(); saveQuotation();">
+      
+      <!-- TAB 1: ALCANCE & MÓDULOS -->
+      <div id="tabScope" class="tab-content active">
+        <div class="card">
+          <div class="section-header">
+            <span class="section-num">01</span>
+            <h2 class="section-title">Información General del Proyecto</h2>
+          </div>
+          
+          <div class="grid-2">
+            <div class="form-group">
+              <label class="form-label">Título del Proyecto</label>
+              <input type="text" id="project_title" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Categoría / Tipo de Solución</label>
+              <input type="text" id="project_category" class="form-control" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Descripción del Desarrollo a Realizar</label>
+            <textarea id="project_description" class="form-control" rows="4"></textarea>
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <div class="section-header" style="margin-bottom: 0;">
+              <span class="section-num">02</span>
+              <h2 class="section-title">Módulos del Sistema (Alcance Funcional)</h2>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="addModule()">➕ Agregar Módulo</button>
+          </div>
+
+          <div id="modulesContainer" style="display: flex; flex-direction: column; gap: 14px;">
+            <!-- Renderizado dinámico -->
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: PLANES & PRECIOS -->
+      <div id="tabPlans" class="tab-content">
+        <div class="card">
+          <div class="section-header">
+            <span class="section-num">03</span>
+            <h2 class="section-title">Planes de Inversión (Tiers de Desarrollo)</h2>
+          </div>
+          <p style="font-size: 13.5px; color: var(--slate-500); margin-bottom: 20px;">
+            Configura el precio y las horas de soporte que vienen incluidas sin costo mensual en cada opción.
+          </p>
+
+          <div class="grid-3" id="plansContainer">
+            <!-- Renderizado dinámico de los planes (1 o más) -->
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" style="margin-top: 16px;" onclick="addPlan()">➕ Agregar Plan</button>
+        </div>
+
+        <div class="card">
+          <div class="section-header">
+            <span class="section-num">04</span>
+            <h2 class="section-title">Servicios Complementarios y Tarifas por Hora</h2>
+          </div>
+          
+          <div class="grid-3">
+            <div class="form-group">
+              <label class="form-label">Valor Hora Desarrollo Extra (COP)</label>
+              <input type="number" id="hourly_rate_dev" class="form-control" step="5000">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Valor Hora Soporte Extra (COP)</label>
+              <input type="number" id="hourly_rate_supp" class="form-control" step="5000">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Costo Pruebas de Penetración / Seguridad</label>
+              <input type="text" id="pentest_cost" class="form-control">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Alcance de Pruebas de Penetración y Vulnerabilidades</label>
+            <input type="text" id="pentest_desc" class="form-control">
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: EXCLUSIONES & LIMITANTES -->
+      <div id="tabLimits" class="tab-content">
+        <div class="grid-2">
+          <div class="card">
+            <div class="section-header">
+              <span class="section-num">05</span>
+              <h2 class="section-title">Costos No Asumidos (Exclusiones)</h2>
+            </div>
+            <p style="font-size: 12.5px; color: var(--slate-500); margin-bottom: 8px;">Una exclusión por línea.</p>
+            <textarea id="exclusions_text" class="form-control" rows="9"></textarea>
+          </div>
+
+          <div class="card">
+            <div class="section-header">
+              <span class="section-num">06</span>
+              <h2 class="section-title">Limitantes y Condiciones Técnicas</h2>
+            </div>
+            <p style="font-size: 12.5px; color: var(--slate-500); margin-bottom: 8px;">Una limitante por línea.</p>
+            <textarea id="limitations_text" class="form-control" rows="9"></textarea>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- TAB 4: PAGOS & FACTURACIÓN -->
+      <div id="tabPayments" class="tab-content">
+        <div class="card">
+          <div class="section-header">
+            <span class="section-num">07</span>
+            <h2 class="section-title">Condiciones Comerciales y Formas de Pago</h2>
+          </div>
+
+          <div class="grid-2">
+            <div class="form-group">
+              <label class="form-label">Régimen Tributario</label>
+              <select id="tax_type_select" class="form-control" onchange="onTaxChange()">
+                <option value="neto">Valor Neto (Persona Natural / No Responsable de IVA - 0%)</option>
+                <option value="iva19">IVA Régimen Común (19%)</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="margin-top: 10px; padding: 14px 16px; border: 1px solid var(--slate-200); border-radius: var(--radius-sm); background: var(--slate-50);">
+            <div class="form-label" style="margin-bottom: 4px;">Retenciones (solo si el cliente es agente retenedor)</div>
+            <p style="font-size: 12.5px; color: var(--slate-500); margin-bottom: 12px;">
+              Se descuentan del total de la factura y se muestra el <strong>Neto a Pagar</strong>. Confirma las tarifas con tu contador.
+            </p>
+            <div class="grid-3">
+              <div class="form-group">
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; cursor: pointer;">
+                  <input type="checkbox" id="rete_fuente_enabled"> ReteFuente (%)
+                </label>
+                <input type="number" id="rete_fuente_pct" class="form-control" value="11" min="0" max="100" step="0.01">
+                <small style="color: var(--slate-500);">Sobre el subtotal antes de IVA</small>
+              </div>
+              <div class="form-group">
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; cursor: pointer;">
+                  <input type="checkbox" id="rete_iva_enabled"> ReteIVA (% del IVA)
+                </label>
+                <input type="number" id="rete_iva_pct" class="form-control" value="15" min="0" max="100" step="0.01">
+                <small id="rete_iva_hint" style="color: var(--slate-500);">Solo aplica si se cobra IVA</small>
+              </div>
+              <div class="form-group">
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; cursor: pointer;">
+                  <input type="checkbox" id="rete_ica_enabled"> ReteICA (por mil ‰)
+                </label>
+                <input type="number" id="rete_ica_pm" class="form-control" value="9.66" min="0" max="100" step="0.01">
+                <small style="color: var(--slate-500);">Tarifa del municipio, sobre el subtotal</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-3" style="margin-top: 10px;">
+            <div class="form-group">
+              <label class="form-label">% Anticipo</label>
+              <input type="number" id="adv_pct" class="form-control" value="50" min="0" max="100">
+            </div>
+            <div class="form-group">
+              <label class="form-label">% Hito Web</label>
+              <input type="number" id="mid_pct" class="form-control" value="30" min="0" max="100">
+            </div>
+            <div class="form-group">
+              <label class="form-label">% Entrega Final</label>
+              <input type="number" id="fin_pct" class="form-control" value="20" min="0" max="100">
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- TAB 5: EMISOR & CLIENTE -->
+      <div id="tabMeta" class="tab-content">
+        <div class="grid-2">
+          <div class="card">
+            <div class="section-header">
+              <span class="section-num">🏢</span>
+              <h2 class="section-title">Datos del Emisor (Tu Empresa)</h2>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nombre de tu Empresa / Profesional</label>
+              <input type="text" id="company_name" class="form-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Especialidad / Subtítulo</label>
+              <input type="text" id="company_lead" class="form-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Contacto (Email, Teléfono, Ciudad)</label>
+              <input type="text" id="company_contact" class="form-control">
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="section-header">
+              <span class="section-num">👤</span>
+              <h2 class="section-title">Datos del Cliente</h2>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nombre del Cliente / Contacto</label>
+              <input type="text" id="client_name" class="form-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Empresa u Organización del Cliente</label>
+              <input type="text" id="client_company" class="form-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Contacto del Cliente (Email / Tel)</label>
+              <input type="text" id="client_contact" class="form-control">
+            </div>
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label">N° de Cotización</label>
+                <input type="text" id="quote_number" class="form-control">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Vigencia</label>
+                <input type="text" id="quote_validity" class="form-control">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+        <button type="button" class="btn btn-primary btn-lg" onclick="saveQuotation()">
+          💾 Guardar Cotización y Generar Enlace
+        </button>
+      </div>
+    </form>
+  </main>
+
+  <script>
+    let currentProposal = {{ initial_data | tojson }};
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      
+      const targetBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick').includes(tabId));
+      if (targetBtn) targetBtn.classList.add('active');
+      const targetContent = document.getElementById(tabId);
+      if (targetContent) targetContent.classList.add('active');
+    }
+
+    function populateForm(data) {
+      document.getElementById('company_name').value = data.company_name || '';
+      document.getElementById('company_lead').value = data.company_lead || '';
+      document.getElementById('company_contact').value = data.company_contact || '';
+      
+      document.getElementById('quote_number').value = data.quote_number || '';
+      document.getElementById('quote_validity').value = data.quote_validity || '';
+      
+      document.getElementById('client_name').value = data.client_name || '';
+      document.getElementById('client_company').value = data.client_company || '';
+      document.getElementById('client_contact').value = data.client_contact || '';
+      
+      document.getElementById('project_title').value = data.project_title || '';
+      document.getElementById('project_category').value = data.project_category || '';
+      document.getElementById('project_description').value = data.project_description || '';
+      
+      document.getElementById('hourly_rate_dev').value = data.hourly_rate_dev || 75000;
+      document.getElementById('hourly_rate_supp').value = data.hourly_rate_supp || 50000;
+      document.getElementById('pentest_cost').value = data.pentest_cost || '';
+      document.getElementById('pentest_desc').value = data.pentest_desc || '';
+
+      document.getElementById('exclusions_text').value = (data.exclusions || []).join('\n');
+      document.getElementById('limitations_text').value = (data.limitations || []).join('\n');
+
+      document.getElementById('adv_pct').value = data.adv_pct || 50;
+      document.getElementById('mid_pct').value = data.mid_pct || 30;
+      document.getElementById('fin_pct').value = data.fin_pct || 20;
+
+      if ((data.tax_rate || 0) > 0) {
+        document.getElementById('tax_type_select').value = 'iva19';
+      } else {
+        document.getElementById('tax_type_select').value = 'neto';
+      }
+      document.getElementById('rete_fuente_enabled').checked = !!data.rete_fuente_enabled;
+      document.getElementById('rete_fuente_pct').value = data.rete_fuente_pct ?? 11;
+      document.getElementById('rete_iva_enabled').checked = !!data.rete_iva_enabled;
+      document.getElementById('rete_iva_pct').value = data.rete_iva_pct ?? 15;
+      document.getElementById('rete_ica_enabled').checked = !!data.rete_ica_enabled;
+      document.getElementById('rete_ica_pm').value = data.rete_ica_pm ?? 9.66;
+      onTaxChange();
+
+      renderModules(data.modules || []);
+      renderPlans(data.plans || []);
+    }
+
+    function renderModules(modules) {
+      const container = document.getElementById('modulesContainer');
+      container.innerHTML = '';
+      modules.forEach((mod, idx) => {
+        const div = document.createElement('div');
+        div.className = 'card';
+        div.style.padding = '14px 16px';
+        div.style.background = 'var(--slate-50)';
+        div.innerHTML = `
+          <div style="display: flex; gap: 12px; align-items: center;">
+            <div style="flex: 1;">
+              <input type="text" class="form-control mod-name" value="${mod.name}" placeholder="Nombre del Módulo" style="font-weight: 700;">
+            </div>
+            <div style="flex: 2;">
+              <input type="text" class="form-control mod-desc" value="${mod.desc}" placeholder="Descripción del Alcance">
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="this.closest('.card').remove()" style="color: var(--rose-700);">🗑️</button>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function addModule() {
+      const container = document.getElementById('modulesContainer');
+      const div = document.createElement('div');
+      div.className = 'card';
+      div.style.padding = '14px 16px';
+      div.style.background = 'var(--slate-50)';
+      div.innerHTML = `
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <div style="flex: 1;">
+            <input type="text" class="form-control mod-name" value="Nuevo Módulo" placeholder="Nombre del Módulo" style="font-weight: 700;">
+          </div>
+          <div style="flex: 2;">
+            <input type="text" class="form-control mod-desc" value="Descripción funcional del componente" placeholder="Descripción del Alcance">
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="this.closest('.card').remove()" style="color: var(--rose-700);">🗑️</button>
+        </div>
+      `;
+      container.appendChild(div);
+    }
+
+    function onTaxChange() {
+      const hasIva = document.getElementById('tax_type_select').value === 'iva19';
+      const chk = document.getElementById('rete_iva_enabled');
+      chk.disabled = !hasIva;
+      if (!hasIva) chk.checked = false;
+      document.getElementById('rete_iva_pct').disabled = !hasIva;
+    }
+
+    function readPlansFromForm() {
+      const plans = [];
+      document.querySelectorAll('#plansContainer .plan-card').forEach((card, idx) => {
+        const num = "Opción " + (idx + 1);
+        const name = card.querySelector('.plan-name-input').value.trim();
+        const price = parseFloat(card.querySelector('.plan-price-input').value) || 0;
+        const support_hours = card.querySelector('.plan-support-input').value.trim();
+        const features = card.querySelector('.plan-features-input').value.trim();
+        const is_recommended = card.querySelector('.plan-rec-input').checked;
+        plans.push({ num, name, price, support_hours, features, is_recommended });
+      });
+      return plans;
+    }
+
+    function planItems(features) {
+      if (Array.isArray(features)) return features;
+      const text = String(features ?? '');
+      const items = text.includes('\n') ? text.split('\n') : text.split(' + ');
+      return items.map(i => i.replace(/^[\s\-•✔]+|\s+$/g, '')).filter(Boolean);
+    }
+
+    function escapeAttr(v) {
+      return String(v ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    }
+
+    function addPlan() {
+      const plans = readPlansFromForm();
+      plans.push({ name: 'Nuevo Plan', price: 0, support_hours: '', features: '', is_recommended: false });
+      renderPlans(plans);
+    }
+
+    function removePlan(idx) {
+      const plans = readPlansFromForm();
+      if (plans.length <= 1) { alert('La propuesta debe tener al menos 1 plan.'); return; }
+      plans.splice(idx, 1);
+      renderPlans(plans);
+    }
+
+    function renderPlans(plans) {
+      const container = document.getElementById('plansContainer');
+      if (!plans.length) plans = [{ name: 'Plan Único', price: 0, support_hours: '', features: '', is_recommended: false }];
+      container.innerHTML = '';
+      plans.forEach((plan, idx) => {
+        const div = document.createElement('div');
+        div.className = 'plan-card ' + (plan.is_recommended ? 'recommended' : '');
+        div.innerHTML = `
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span class="plan-num">Opción ${idx + 1}</span>
+              ${plans.length > 1 ? `<button type="button" class="btn btn-sm" style="padding: 3px 8px; font-size: 11.5px; color: #E11D48;" onclick="removePlan(${idx})">🗑️ Quitar</button>` : ''}
+            </div>
+            <div class="form-group" style="margin-top: 6px;">
+              <label class="form-label">Nombre del Plan</label>
+              <input type="text" class="form-control plan-name-input" value="${escapeAttr(plan.name)}">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Inversión Total (COP)</label>
+              <input type="number" class="form-control plan-price-input" value="${escapeAttr(plan.price)}" step="100000">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Horas Soporte Incluidas</label>
+              <input type="text" class="form-control plan-support-input" value="${escapeAttr(plan.support_hours)}">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Alcance y Entregables <span style="font-weight: 500; color: var(--slate-500);">(uno por línea)</span></label>
+              <textarea class="form-control plan-features-input" rows="6" placeholder="Aplicación web responsive&#10;Panel administrativo&#10;APK Android&#10;Garantía de 30 días">${escapeAttr(planItems(plan.features).join('\n'))}</textarea>
+            </div>
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; margin-top: 10px;">
+              <input type="checkbox" class="plan-rec-input" ${plan.is_recommended ? 'checked' : ''}>
+              <strong style="color: var(--primary);">Marcar como Recomendado</strong>
+            </label>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function collectData() {
+      // Módulos
+      const modules = [];
+      document.querySelectorAll('#modulesContainer .card').forEach(row => {
+        const name = row.querySelector('.mod-name').value.trim();
+        const desc = row.querySelector('.mod-desc').value.trim();
+        if (name) modules.push({ name, desc });
+      });
+
+      // Planes
+      const plans = readPlansFromForm();
+
+      const tax_type_val = document.getElementById('tax_type_select').value;
+      const tax_rate = tax_type_val === 'iva19' ? 19.0 : 0.0;
+      const tax_type = tax_type_val === 'iva19' ? 'IVA Régimen Común (19%)' : 'Valor Neto (Persona Natural / No Responsable de IVA)';
+
+      return {
+        company_name: document.getElementById('company_name').value,
+        company_lead: document.getElementById('company_lead').value,
+        company_contact: document.getElementById('company_contact').value,
+        
+        quote_number: document.getElementById('quote_number').value,
+        quote_date: currentProposal.quote_date || new Date().toLocaleDateString('es-CO'),
+        quote_validity: document.getElementById('quote_validity').value,
+
+        client_name: document.getElementById('client_name').value,
+        client_company: document.getElementById('client_company').value,
+        client_contact: document.getElementById('client_contact').value,
+
+        project_title: document.getElementById('project_title').value,
+        project_category: document.getElementById('project_category').value,
+        project_description: document.getElementById('project_description').value,
+
+        modules: modules,
+        plans: plans,
+
+        hourly_rate_dev: parseFloat(document.getElementById('hourly_rate_dev').value) || 75000,
+        hourly_rate_supp: parseFloat(document.getElementById('hourly_rate_supp').value) || 50000,
+        pentest_cost: document.getElementById('pentest_cost').value,
+        pentest_desc: document.getElementById('pentest_desc').value,
+
+        exclusions: document.getElementById('exclusions_text').value.split('\n').filter(s => s.trim()),
+        limitations: document.getElementById('limitations_text').value.split('\n').filter(s => s.trim()),
+
+        tax_type: tax_type,
+        tax_rate: tax_rate,
+        rete_fuente_enabled: document.getElementById('rete_fuente_enabled').checked,
+        rete_fuente_pct: parseFloat(document.getElementById('rete_fuente_pct').value) || 0,
+        rete_iva_enabled: document.getElementById('rete_iva_enabled').checked,
+        rete_iva_pct: parseFloat(document.getElementById('rete_iva_pct').value) || 0,
+        rete_ica_enabled: document.getElementById('rete_ica_enabled').checked,
+        rete_ica_pm: parseFloat(document.getElementById('rete_ica_pm').value) || 0,
+        adv_pct: parseFloat(document.getElementById('adv_pct').value) || 50,
+        mid_pct: parseFloat(document.getElementById('mid_pct').value) || 30,
+        fin_pct: parseFloat(document.getElementById('fin_pct').value) || 20
+      };
+    }
+
+    async function saveQuotation() {
+      const data = collectData();
+      try {
+        const resp = await fetch('/api/cotizaciones', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        
+        if (resp.status === 401) {
+          alert('⚠️ Tu sesión de administrador ha expirado o no estás autenticado. Serás redirigido al inicio de sesión.');
+          window.location.href = '/login?next=/';
+          return;
+        }
+
+        const res = await resp.json();
+        if (res.status === 'ok') {
+          currentProposal = data;
+          const shareUrl = window.location.origin + '/cotizacion/' + res.quote_id;
+          
+          document.getElementById('shareBanner').style.display = 'block';
+          document.getElementById('shareUrlText').textContent = shareUrl;
+          document.getElementById('btnClientView').href = '/cotizacion/' + res.quote_id;
+          document.getElementById('btnPdfDownload').href = '/api/cotizaciones/' + res.quote_id + '/pdf';
+          
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+          alert('Error: ' + (res.detail || res.message || 'No se pudo guardar'));
+        }
+      } catch (err) {
+        alert('Error al guardar la cotización: ' + err.message);
+      }
+    }
+
+    async function loadPreset() {
+      try {
+        const resp = await fetch('/api/preset');
+        const data = await resp.json();
+        populateForm(data);
+      } catch (e) {
+        alert('Error al cargar preset');
+      }
+    }
+
+    function copyShareUrl() {
+      const url = document.getElementById('shareUrlText').textContent;
+      navigator.clipboard.writeText(url).then(() => {
+        alert('Enlace copiado al portapapeles:\n' + url);
+      });
+    }
+
+    // Inicialización al cargar la página
+    document.addEventListener('DOMContentLoaded', () => {
+      populateForm(currentProposal);
+      // Si ya hay un N° de cotización, mostrar banner
+      if (currentProposal.quote_number) {
+        const shareUrl = window.location.origin + '/cotizacion/' + currentProposal.quote_number;
+        document.getElementById('shareBanner').style.display = 'block';
+        document.getElementById('shareUrlText').textContent = shareUrl;
+        document.getElementById('btnClientView').href = '/cotizacion/' + currentProposal.quote_number;
+        document.getElementById('btnPdfDownload').href = '/api/cotizaciones/' + currentProposal.quote_number + '/pdf';
+      }
+    });
+  </script>
+</body>
+</html>

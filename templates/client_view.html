@@ -1,0 +1,585 @@
+{% set sel_idx = [[data.selected_plan_index|default(0), 0]|max, (data.plans|length) - 1]|min %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ data.project_title }} — Propuesta Técnico-Comercial ({{ data.quote_number }})</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <style>
+    /* Estilos complementarios para la vista interactiva */
+    .plan-scope-list { list-style: none; padding: 0; margin: 0 0 12px; display: grid; gap: 6px; }
+    .plan-scope-list li { position: relative; padding-left: 22px; line-height: 1.45; }
+    .plan-scope-list li::before { content: "✔"; position: absolute; left: 0; top: 0; color: var(--emerald-600); font-weight: 800; }
+    .plan-scope-grid { margin-top: 10px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 6px 20px; }
+    .detail-pill-box {
+      background: #FFFFFF;
+      border: 1px solid var(--slate-200);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .detail-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: var(--primary-light);
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 800;
+    }
+    .plan-detail-card {
+      background: #FFFFFF;
+      border: 1px solid var(--primary-border);
+      border-left: 4px solid var(--primary);
+      border-radius: var(--radius-md);
+      padding: 22px 24px;
+      margin-top: 24px;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.08);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- BARRA SUPERIOR FIJA -->
+  <header class="navbar">
+    <div class="container navbar-inner">
+      <a href="#" class="brand-badge">
+        <span class="brand-dot"></span>
+        <span>{{ data.company_name }}</span>
+      </a>
+      <div class="nav-actions">
+        <span style="font-size: 13px; color: var(--slate-500); font-weight: 600;">
+          Propuesta N°: <strong style="color: var(--primary);">{{ data.quote_number }}</strong>
+        </span>
+        <a id="navPdfBtn" href="/api/cotizaciones/{{ data.quote_number }}/pdf?plan_index={{ sel_idx }}" target="_blank" class="btn btn-primary btn-sm">
+          📥 Descargar PDF Oficial
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main class="container" style="padding-top: 30px; padding-bottom: 110px;">
+    
+    <!-- HERO BANNER -->
+    <div class="hero-card">
+      <div class="tag-pill">⚡ PROPUESTA COMERCIAL INTERACTIVA</div>
+      <h1 class="hero-title">CADA PESO <span>REGISTRADO.</span> CADA DECISIÓN INFORMADA.</h1>
+      <p class="hero-desc">
+        Propuesta técnico-comercial para el desarrollo e implementación de la solución 
+        <strong>{{ data.project_title }}</strong> (Plataforma Web + App Móvil Android APK + Panel Administrativo).
+      </p>
+
+      <div class="hero-kpis">
+        <div class="kpi-chip">👤 Cliente: <strong>{{ data.client_name }}</strong></div>
+        <div class="kpi-chip">🏢 Empresa: <strong>{{ data.client_company }}</strong></div>
+        <div class="kpi-chip">📅 Fecha: <strong>{{ data.quote_date }}</strong></div>
+        <div class="kpi-chip">⏳ Vigencia: <strong>{{ data.quote_validity }}</strong></div>
+      </div>
+    </div>
+
+    <!-- 01. DESCRIPCIÓN DEL DESARROLLO -->
+    <section class="card">
+      <div class="section-header">
+        <span class="section-num">01</span>
+        <h2 class="section-title">Descripción y Objetivo del Desarrollo</h2>
+      </div>
+      <div style="font-size: 14.5px; color: var(--slate-700); line-height: 1.65; border-left: 3px solid var(--primary); padding: 12px 18px; background: var(--slate-50); border-radius: 0 var(--radius-sm) var(--radius-sm) 0;">
+        {{ data.project_description }}
+      </div>
+    </section>
+
+    <!-- 02. MÓDULOS DE ALCANCE -->
+    <section class="card">
+      <div class="section-header">
+        <span class="section-num">02</span>
+        <h2 class="section-title">Módulos de Alcance Funcional</h2>
+      </div>
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width: 28%;">Módulo / Componente</th>
+              <th>Descripción del Alcance Técnico-Funcional</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for mod in data.modules %}
+            <tr>
+              <td>
+                <span style="font-size: 11px; font-weight: 800; color: var(--primary);">MOD-{{ "%02d"|format(loop.index) }}</span><br>
+                <strong style="color: var(--slate-900);">{{ mod.name }}</strong>
+              </td>
+              <td style="color: var(--slate-600); line-height: 1.5;">{{ mod.desc }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 03. PLANES DE INVERSIÓN (INTERACTIVO) -->
+    <section class="card" id="seccionPlanes">
+      <div class="section-header">
+        <span class="section-num">03</span>
+        <h2 class="section-title">Opciones de Inversión y Planes Disponibles</h2>
+      </div>
+      <p style="font-size: 13.5px; color: var(--slate-500); margin-bottom: 20px;">
+        Haz clic en cualquiera de las opciones para seleccionarla. El desglose de pagos y la propuesta en PDF se actualizarán en tiempo real según tu elección:
+      </p>
+
+      <!-- Grid de tarjetas interactivas -->
+      <div class="plans-grid">
+        {% for p in data.plans %}
+        <div class="plan-card {% if p.is_recommended %}recommended{% endif %}" id="planCard{{ loop.index0 }}" onclick="selectPlan({{ loop.index0 }})">
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <span class="plan-num">{{ p.num }}</span>
+              <span class="plan-selection-check" id="planCheck{{ loop.index0 }}" style="display: none;">
+                ✔ SELECCIÓN ACTUAL
+              </span>
+            </div>
+
+            {% if p.is_recommended %}
+            <span class="plan-badge">★ RECOMENDADO</span>
+            {% endif %}
+
+            <div class="plan-name">{{ p.name }}</div>
+            <div class="plan-price">$ {{ "{:,.0f}".format(p.price|float).replace(",", ".") }} COP</div>
+            <div class="plan-support">✨ {{ p.support_hours }} de soporte incluidas</div>
+          </div>
+
+          <div class="plan-features">
+            <ul class="plan-scope-list">
+              {% for item in p.features|plan_items %}
+              <li>{{ item }}</li>
+              {% endfor %}
+            </ul>
+            <button type="button" class="btn-select-plan" id="btnPlan{{ loop.index0 }}">
+              Elegir este Plan
+            </button>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- DESGLOSE DETALLADO DEL PLAN SELECCIONADO (DINÁMICO) -->
+      <div class="plan-detail-card" id="planDetailCard">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 14px;">
+          <div>
+            <span style="font-size: 11px; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 0.06em;">Desglose Específico</span>
+            <h3 id="detailPlanTitle" style="font-size: 19px; font-weight: 800; color: var(--slate-900); margin-top: 2px;">Plan Estándar Profesional</h3>
+          </div>
+          <div style="text-align: right;">
+            <div id="detailPlanPrice" style="font-size: 24px; font-weight: 800; color: var(--primary);">$ 4.000.000 COP</div>
+            <div style="font-size: 12px; color: var(--slate-500);">Valor total de desarrollo</div>
+          </div>
+        </div>
+
+        <div class="grid-3" style="gap: 12px; margin-top: 16px;">
+          <div class="detail-pill-box">
+            <div class="detail-icon">⏱️</div>
+            <div>
+              <div style="font-size: 11.5px; color: var(--slate-500); font-weight: 600;">Soporte Técnico</div>
+              <strong id="detailPlanHours" style="color: var(--emerald-700); font-size: 13.5px;">15 horas incluidas</strong>
+            </div>
+          </div>
+          <div class="detail-pill-box">
+            <div class="detail-icon">📱</div>
+            <div>
+              <div style="font-size: 11.5px; color: var(--slate-500); font-weight: 600;">App Móvil</div>
+              <strong style="color: var(--slate-800); font-size: 13.5px;">APK Android Instalador</strong>
+            </div>
+          </div>
+          <div class="detail-pill-box">
+            <div class="detail-icon">🛡️</div>
+            <div>
+              <div style="font-size: 11.5px; color: var(--slate-500); font-weight: 600;">Garantía Directa</div>
+              <strong style="color: var(--slate-800); font-size: 13.5px;">30 días de cobertura bugs</strong>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--slate-200); font-size: 13.5px; color: var(--slate-600);">
+          <strong>Alcance y entregables de este plan:</strong>
+          <ul id="detailPlanDesc" class="plan-scope-list plan-scope-grid"></ul>
+        </div>
+      </div>
+
+      <!-- TABLA COMPARATIVA DETALLADA DE PLANES -->
+      <div style="margin-top: 32px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+          <h3 style="font-size: 16.5px; font-weight: 800; color: var(--slate-900);">
+            📊 Comparativa Detallada de Características por Opción
+          </h3>
+          <span style="font-size: 12px; color: var(--slate-500);">
+            Haz clic en los botones de columna para alternar entre opciones
+          </span>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table" style="text-align: center;">
+            <thead>
+              <tr>
+                <th style="text-align: left; width: 34%;">Característica / Servicio</th>
+                {% for p in data.plans %}
+                <th style="width: 22%;" id="thPlanCol{{ loop.index0 }}">
+                  <div style="font-size: 11px; text-transform: uppercase; color: var(--slate-400);">{{ p.num }}</div>
+                  <div style="font-size: 14px; font-weight: 800; color: var(--slate-900); margin: 2px 0;">{{ p.name }}</div>
+                  <div style="font-size: 14.5px; font-weight: 800; color: var(--primary);">$ {{ "{:,.0f}".format(p.price|float).replace(",", ".") }} COP</div>
+                  <button type="button" class="btn btn-sm" id="btnTableSelect{{ loop.index0 }}" onclick="selectPlan({{ loop.index0 }})" style="margin-top: 8px; width: 100%; padding: 5px 8px; font-size: 11.5px;">
+                    Seleccionar
+                  </button>
+                </th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="text-align: left; font-weight: 600; color: var(--slate-800);">🌐 Aplicación Web Responsive & Backend</td>
+{% set vals = ['<span style="color: var(--emerald-600); font-weight: 800;">✔ Incluida (MVP)</span>', '<span style="color: var(--emerald-600); font-weight: 800;">✔ Incluida Completa</span>', '<span style="color: var(--emerald-600); font-weight: 800;">✔ Incluida Escalable</span>'] %}
+                {% for p in data.plans %}<td>{{ (vals[loop.index0] if loop.index0 < vals|length else vals[-1])|safe }}</td>{% endfor %}
+              </tr>
+              <tr>
+                <td style="text-align: left; font-weight: 600; color: var(--slate-800);">📱 Aplicación Móvil Android (Archivo APK)</td>
+{% set vals = ['<span style="color: var(--emerald-600); font-weight: 800;">✔ Compilada</span>', '<span style="color: var(--emerald-600); font-weight: 800;">✔ Compilada & Optimizada</span>', '<span style="color: var(--emerald-600); font-weight: 800;">✔ Compilada & Optimizada</span>'] %}
+                {% for p in data.plans %}<td>{{ (vals[loop.index0] if loop.index0 < vals|length else vals[-1])|safe }}</td>{% endfor %}
+              </tr>
+              <tr>
+                <td style="text-align: left; font-weight: 600; color: var(--slate-800);">🏢 Panel Administrativo y Auditoría</td>
+{% set vals = ['<span style="color: var(--slate-400);">Funciones esenciales</span>', '<span style="color: var(--emerald-600); font-weight: 800;">✔ Panel Completo</span>', '<span style="color: var(--emerald-600); font-weight: 800;">✔ Panel Completo + Reportes</span>'] %}
+                {% for p in data.plans %}<td>{{ (vals[loop.index0] if loop.index0 < vals|length else vals[-1])|safe }}</td>{% endfor %}
+              </tr>
+              <tr>
+                <td style="text-align: left; font-weight: 600; color: var(--slate-800);">⚡ Sincronización en la Nube y Base de Datos</td>
+{% set vals = ['<span style="color: var(--emerald-600); font-weight: 800;">✔ Tiempo Real</span>', '<span style="color: var(--emerald-600); font-weight: 800;">✔ Tiempo Real Seguro</span>', '<span style="color: var(--emerald-600); font-weight: 800;">✔ Alta Disponibilidad</span>'] %}
+                {% for p in data.plans %}<td>{{ (vals[loop.index0] if loop.index0 < vals|length else vals[-1])|safe }}</td>{% endfor %}
+              </tr>
+              <tr style="background: var(--primary-light);">
+                <td style="text-align: left; font-weight: 800; color: var(--primary);">⏱️ Horas de Soporte Técnico Incluidas (Sin Costo Mensual)</td>
+                {% for p in data.plans %}
+                <td>
+                  <strong style="color: var(--primary); font-size: 14px;">{{ p.support_hours }}</strong>
+                </td>
+                {% endfor %}
+              </tr>
+              <tr>
+                <td style="text-align: left; font-weight: 600; color: var(--slate-800);">🛡️ Garantía Técnica Directa</td>
+{% set vals = ['30 días calendario', '<strong>30 días calendario</strong>', '<strong>45 días calendario</strong>'] %}
+                {% for p in data.plans %}<td>{{ (vals[loop.index0] if loop.index0 < vals|length else vals[-1])|safe }}</td>{% endfor %}
+              </tr>
+              <tr>
+                <td style="text-align: left; font-weight: 600; color: var(--slate-800);">🎓 Capacitación y Entrega de Manuales</td>
+{% set vals = ['1 hora virtual', '2 horas virtuales', '3 horas virtuales'] %}
+                {% for p in data.plans %}<td>{{ (vals[loop.index0] if loop.index0 < vals|length else vals[-1])|safe }}</td>{% endfor %}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 04. SERVICIOS Y TARIFAS ADICIONALES -->
+    <section class="card">
+      <div class="section-header">
+        <span class="section-num">04</span>
+        <h2 class="section-title">Servicios Complementarios y Bolsa de Horas</h2>
+      </div>
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width: 30%;">Concepto</th>
+              <th>Descripción</th>
+              <th style="width: 25%;">Tarifa (COP)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Pruebas de Penetración y Seguridad</strong></td>
+              <td style="color: var(--slate-600);">{{ data.pentest_desc }}</td>
+              <td><strong style="color: var(--primary);">{{ data.pentest_cost }}</strong></td>
+            </tr>
+            <tr>
+              <td><strong>Hora de Desarrollo Adicional</strong></td>
+              <td style="color: var(--slate-600);">Para nuevos requerimientos o módulos fuera del alcance pactado.</td>
+              <td><strong>$ {{ "{:,.0f}".format(data.hourly_rate_dev|float).replace(",", ".") }} COP / hora</strong></td>
+            </tr>
+            <tr>
+              <td><strong>Hora de Soporte Extra</strong></td>
+              <td style="color: var(--slate-600);">Aplica exclusivamente una vez agotada la bolsa de soporte incluida en el plan.</td>
+              <td><strong>$ {{ "{:,.0f}".format(data.hourly_rate_supp|float).replace(",", ".") }} COP / hora</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 05 & 06. EXCLUSIONES Y LIMITANTES -->
+    <div class="grid-2">
+      <!-- Exclusiones -->
+      <section class="card">
+        <div class="section-header">
+          <span class="section-num">05</span>
+          <h2 class="section-title">Costos No Asumidos (Exclusiones)</h2>
+        </div>
+        <div class="alert-box alert-rose">
+          <ul class="clean-list">
+            {% for ex in data.exclusions %}
+            <li>• {{ ex }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </section>
+
+      <!-- Limitantes -->
+      <section class="card">
+        <div class="section-header">
+          <span class="section-num">06</span>
+          <h2 class="section-title">Limitantes y Condiciones Técnicas</h2>
+        </div>
+        <div class="alert-box alert-slate">
+          <ul class="clean-list">
+            {% for lim in data.limitations %}
+            <li>• {{ lim }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </section>
+    </div>
+
+    <!-- 07. FORMAS DE PAGO Y LIQUIDACIÓN (RECALCULABLE DINÁMICAMENTE) -->
+    <section class="card" id="seccionLiquidacion">
+      <div class="section-header">
+        <span class="section-num">07</span>
+        <h2 class="section-title">Condiciones Comerciales y Formas de Pago</h2>
+      </div>
+      <p style="font-size: 13.5px; color: var(--slate-600); margin-bottom: 14px;">
+        Liquidación calculada sobre el plan: <strong id="summaryPlanLabel">Opción 2 — Plan Estándar Profesional</strong> (<span id="summaryPlanHours">15 horas de soporte incluidas</span>).
+      </p>
+
+      <div class="table-responsive" style="margin-bottom: 20px;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width: 25%;">Hito de Pago</th>
+              <th>Condición de Cumplimiento</th>
+              <th style="width: 25%;">Valor (COP)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>{{ data.adv_pct }}% Anticipo</strong></td>
+              <td style="color: var(--slate-600);">Al momento de la firma y aprobación de la propuesta comercial.</td>
+              <td><strong id="rowAdvVal">$ 0 COP</strong></td>
+            </tr>
+            <tr>
+              <td><strong>{{ data.mid_pct }}% Hito Web</strong></td>
+              <td style="color: var(--slate-600);">Contra entrega de la versión Web funcional conectada al backend centralizado.</td>
+              <td><strong id="rowMidVal">$ 0 COP</strong></td>
+            </tr>
+            <tr>
+              <td><strong>{{ data.fin_pct }}% Entrega Final</strong></td>
+              <td style="color: var(--slate-600);">Contra entrega del archivo APK compilado, despliegue operativo y accesos maestros.</td>
+              <td><strong id="rowFinVal">$ 0 COP</strong></td>
+            </tr>
+            <tr>
+              <td><strong>Subtotal Desarrollo</strong></td>
+              <td>Valor neto de desarrollo de software</td>
+              <td><strong id="rowSubtotalVal">$ 0 COP</strong></td>
+            </tr>
+            {% if data.tax_rate|float > 0 %}
+            <tr id="rowIva">
+              <td><strong>IVA ({{ data.tax_rate }}%)</strong></td>
+              <td>Régimen de impuestos aplicable</td>
+              <td id="rowIvaVal">$ 0 COP</td>
+            </tr>
+            {% endif %}
+            {% set has_ret = data.rete_fuente_enabled or (data.rete_iva_enabled and data.tax_rate|float > 0) or data.rete_ica_enabled %}
+            <tr class="{% if not has_ret %}total-row{% endif %}" {% if has_ret %}style="font-weight: 800;"{% endif %}>
+              <td>{% if has_ret %}<strong>TOTAL FACTURA</strong>{% else %}TOTAL A PAGAR{% endif %}</td>
+              <td style="font-weight: 500; font-size: 13.5px; color: var(--slate-600);">Régimen: {{ data.tax_type }}</td>
+              <td id="rowTotalVal">$ 0 COP</td>
+            </tr>
+            <tr class="total-row" id="rowNeto" {% if not has_ret %}style="display: none;"{% endif %}>
+              <td>NETO A PAGAR</td>
+              <td style="font-weight: 500; font-size: 13.5px; color: var(--slate-600);">Total factura menos retenciones</td>
+              <td id="rowNetoVal">$ 0 COP</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </section>
+
+    <!-- DESCARGA DEL PDF -->
+    <section class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+        <div>
+          <div style="font-size: 14px; font-weight: 700; color: var(--slate-900);">¿Conforme con la propuesta?</div>
+          <div style="font-size: 12.5px; color: var(--slate-500);">Descarga el PDF formal para archivar, imprimir o proceder con la contratación.</div>
+        </div>
+        <a id="ctaPdfBtn" href="/api/cotizaciones/{{ data.quote_number }}/pdf?plan_index={{ sel_idx }}" target="_blank" class="btn btn-primary btn-lg">
+          📥 Descargar Propuesta Oficial en PDF
+        </a>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- BARRA FLOTANTE INFERIOR CON SELECCIÓN ACTIVA -->
+  <div class="floating-action-bar">
+    <div class="floating-action-inner">
+      <div class="floating-kpi-text">
+        Plan Seleccionado: <strong id="floatingPlanText">Opción 2 — Plan Estándar Profesional</strong> 
+        <span style="color: var(--slate-400); margin: 0 6px;">|</span> 
+        Total: <strong id="floatingTotalText" style="color: #67E8F9;">$ 4.000.000 COP</strong>
+      </div>
+      <div style="display: flex; gap: 10px;">
+        <a id="floatingPdfBtn" href="/api/cotizaciones/{{ data.quote_number }}/pdf?plan_index={{ sel_idx }}" target="_blank" class="btn btn-primary btn-sm">
+          📥 Descargar PDF con este Plan
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT INTERACTIVO -->
+  <script>
+    const quoteData = {{ data | tojson }};
+    let currentSelectedIndex = {{ sel_idx }};
+
+    function formatCOP(val) {
+      return '$ ' + Math.round(val).toLocaleString('es-CO') + ' COP';
+    }
+
+    function selectPlan(index) {
+      currentSelectedIndex = index;
+      const plans = quoteData.plans || [];
+      const plan = plans[index];
+      if (!plan) return;
+
+      // 1. Actualizar clases de tarjetas
+      plans.forEach((p, idx) => {
+        const card = document.getElementById('planCard' + idx);
+        const check = document.getElementById('planCheck' + idx);
+        const btn = document.getElementById('btnPlan' + idx);
+        
+        if (idx === index) {
+          card.classList.add('active-selected');
+          if (check) check.style.display = 'inline-flex';
+          if (btn) btn.textContent = '✔ Plan Seleccionado';
+        } else {
+          card.classList.remove('active-selected');
+          if (check) check.style.display = 'none';
+          if (btn) btn.textContent = 'Elegir este Plan';
+        }
+      });
+
+      // 2. Actualizar Tarjeta de Desglose Específico
+      document.getElementById('detailPlanTitle').textContent = plan.num + ' — ' + plan.name;
+      document.getElementById('detailPlanPrice').textContent = formatCOP(plan.price);
+      document.getElementById('detailPlanHours').textContent = plan.support_hours + ' incluidas';
+      const descList = document.getElementById('detailPlanDesc');
+      descList.innerHTML = '';
+      (Array.isArray(plan.features) ? plan.features
+        : (String(plan.features || '').includes('\n') ? String(plan.features).split('\n') : String(plan.features || '').split(' + ')))
+        .map(i => i.replace(/^[\s\-•✔]+|\s+$/g, '')).filter(Boolean)
+        .forEach(item => { const li = document.createElement('li'); li.textContent = item; descList.appendChild(li); });
+
+      // 3. Recalcular Sección 08 (Hitos de Pago)
+      const baseVal = parseFloat(plan.price) || 0;
+      const advVal = baseVal * (parseFloat(quoteData.adv_pct || 50) / 100.0);
+      const midVal = baseVal * (parseFloat(quoteData.mid_pct || 30) / 100.0);
+      const finVal = baseVal * (parseFloat(quoteData.fin_pct || 20) / 100.0);
+      const taxRate = parseFloat(quoteData.tax_rate || 0);
+      const taxVal = baseVal * (taxRate / 100.0);
+      const totalVal = baseVal + taxVal;
+
+      // Retenciones (se descuentan del total de la factura)
+      const retentions = [];
+      const num = (v) => parseFloat(v) || 0;
+      if (quoteData.rete_fuente_enabled && num(quoteData.rete_fuente_pct) > 0)
+        retentions.push({ label: `Retención en la Fuente (${num(quoteData.rete_fuente_pct)}%)`, desc: 'Sobre el subtotal antes de IVA', value: baseVal * num(quoteData.rete_fuente_pct) / 100 });
+      if (quoteData.rete_iva_enabled && num(quoteData.rete_iva_pct) > 0 && taxVal > 0)
+        retentions.push({ label: `ReteIVA (${num(quoteData.rete_iva_pct)}% del IVA)`, desc: 'Sobre el valor del IVA', value: taxVal * num(quoteData.rete_iva_pct) / 100 });
+      if (quoteData.rete_ica_enabled && num(quoteData.rete_ica_pm) > 0)
+        retentions.push({ label: `ReteICA (${num(quoteData.rete_ica_pm)} por mil)`, desc: 'Sobre el subtotal antes de IVA', value: baseVal * num(quoteData.rete_ica_pm) / 1000 });
+      const netoVal = totalVal - retentions.reduce((a, r) => a + r.value, 0);
+
+      document.getElementById('summaryPlanLabel').textContent = plan.num + ' — ' + plan.name;
+      document.getElementById('summaryPlanHours').textContent = plan.support_hours + ' de soporte incluidas';
+      
+      document.getElementById('rowAdvVal').textContent = formatCOP(advVal);
+      document.getElementById('rowMidVal').textContent = formatCOP(midVal);
+      document.getElementById('rowFinVal').textContent = formatCOP(finVal);
+      document.getElementById('rowSubtotalVal').textContent = formatCOP(baseVal);
+      
+      const rowIva = document.getElementById('rowIvaVal');
+      if (rowIva) rowIva.textContent = formatCOP(taxVal);
+      document.getElementById('rowTotalVal').textContent = formatCOP(totalVal);
+
+      const rowNeto = document.getElementById('rowNeto');
+      document.querySelectorAll('.retention-row').forEach(r => r.remove());
+      retentions.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.className = 'retention-row';
+        tr.innerHTML = `<td><strong></strong></td><td></td><td style="color: #E11D48;"></td>`;
+        tr.children[0].firstChild.textContent = '− ' + r.label;
+        tr.children[1].textContent = r.desc;
+        tr.children[2].textContent = '− ' + formatCOP(r.value);
+        rowNeto.parentNode.insertBefore(tr, rowNeto);
+      });
+      document.getElementById('rowNetoVal').textContent = formatCOP(netoVal);
+
+      // 4. Actualizar Barra Flotante
+      document.getElementById('floatingPlanText').textContent = plan.num + ' (' + plan.name + ')';
+      document.getElementById('floatingTotalText').textContent = formatCOP(retentions.length ? netoVal : totalVal);
+
+      // 5. Actualizar Enlaces de Descarga de PDF
+      const pdfUrl = `/api/cotizaciones/${quoteData.quote_number}/pdf?plan_index=${index}`;
+      document.getElementById('navPdfBtn').href = pdfUrl;
+      document.getElementById('ctaPdfBtn').href = pdfUrl;
+      document.getElementById('floatingPdfBtn').href = pdfUrl;
+      // 6. Actualizar Botones y Cabeceras de la Tabla Comparativa
+      plans.forEach((p, idx) => {
+        const thCol = document.getElementById('thPlanCol' + idx);
+        const tblBtn = document.getElementById('btnTableSelect' + idx);
+        if (thCol && tblBtn) {
+          if (idx === index) {
+            thCol.style.background = 'rgba(79, 70, 229, 0.08)';
+            thCol.style.border = '2px solid var(--primary)';
+            tblBtn.className = 'btn btn-primary btn-sm';
+            tblBtn.textContent = '✔ Seleccionado';
+          } else {
+            thCol.style.background = 'transparent';
+            thCol.style.border = '1px solid var(--slate-200)';
+            tblBtn.className = 'btn btn-secondary btn-sm';
+            tblBtn.textContent = 'Seleccionar';
+          }
+        }
+      });
+
+      // 7. Notificar silenciosamente al backend para guardar preferencia
+      try {
+        fetch(`/api/cotizaciones/${quoteData.quote_number}/select-plan`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ plan_index: index })
+        });
+      } catch (e) {}
+    }
+
+
+    // Inicializar al cargar
+    document.addEventListener('DOMContentLoaded', () => {
+      selectPlan(currentSelectedIndex);
+    });
+  </script>
+</body>
+</html>
