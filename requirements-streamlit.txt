@@ -1,0 +1,3 @@
+# Solo para la versión antigua en Streamlit (app.py); no se usa en Docker
+-r requirements.txt
+streamlit==1.37.1

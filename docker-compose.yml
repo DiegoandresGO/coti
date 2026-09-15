@@ -1,0 +1,14 @@
+services:
+  cotizaciones:
+    build: .
+    container_name: cotizaciones
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - cotizaciones_data:/app/data
+
+volumes:
+  cotizaciones_data:

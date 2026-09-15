@@ -2,7 +2,10 @@ import json
 import os
 from datetime import datetime
 
-STORAGE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cotizaciones_db.json")
+STORAGE_FILE = os.environ.get(
+    "STORAGE_FILE",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "cotizaciones_db.json")
+)
 
 DEFAULT_PROPOSAL = {
     "quote_number": "COT-2026-001",
@@ -117,6 +120,7 @@ def _load_db():
 
 
 def _save_db(data):
+    os.makedirs(os.path.dirname(STORAGE_FILE) or ".", exist_ok=True)
     with open(STORAGE_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
