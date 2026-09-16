@@ -91,6 +91,63 @@ def is_admin_authenticated(request: Request) -> bool:
 
 
 # ==========================================
+# PÁGINAS DE ERROR AMIGABLES
+# ==========================================
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+
+def _wants_html(request: Request) -> bool:
+    """Navegadores reciben una página; la API y fetch() siguen recibiendo JSON."""
+    if request.url.path.startswith("/api/") or request.method != "GET":
+        return False
+    return "text/html" in request.headers.get("accept", "")
+
+
+@app.exception_handler(StarletteHTTPException)
+async def friendly_http_error(request: Request, exc: StarletteHTTPException):
+    if not _wants_html(request):
+        return JSONResponse({"detail": exc.detail}, status_code=exc.status_code, headers=getattr(exc, "headers", None))
+
+    path = request.url.path
+    is_admin = is_admin_authenticated(request)
+    if exc.status_code == 404 and path.startswith("/c/"):
+        ctx = {
+            "icon": "🔗",
+            "title": "Este enlace no está disponible",
+            "message": "No encontramos una propuesta con este enlace. Es posible que haya sido reemplazado por uno nuevo o que la cotización ya no esté vigente.",
+            "tips": [
+                "Verifica que copiaste el enlace completo, sin espacios ni caracteres de más.",
+                "Si recibiste el enlace hace tiempo, pide a quien te lo envió que te comparta el enlace actualizado.",
+            ],
+        }
+    elif exc.status_code == 404:
+        ctx = {
+            "icon": "🧭",
+            "title": "Página no encontrada",
+            "message": "La dirección que intentas abrir no existe o fue movida.",
+            "tips": ["Revisa que la dirección esté bien escrita."],
+        }
+    elif exc.status_code in (401, 403):
+        ctx = {
+            "icon": "🔒",
+            "title": "Acceso restringido",
+            "message": "No tienes permiso para ver esta página.",
+            "tips": [],
+        }
+    else:
+        ctx = {
+            "icon": "⚠️",
+            "title": "Algo salió mal",
+            "message": "No pudimos completar tu solicitud. Intenta de nuevo en unos minutos.",
+            "tips": [],
+        }
+    ctx.update({"status_code": exc.status_code, "show_admin_link": is_admin})
+    response = templates.TemplateResponse(request, "error.html", ctx, status_code=exc.status_code)
+    response.headers.update({"X-Robots-Tag": "noindex, nofollow", "Cache-Control": "no-store"})
+    return response
+
+
+# ==========================================
 # RUTAS DE AUTENTICACIÓN (LOGIN / LOGOUT)
 # ==========================================
 
