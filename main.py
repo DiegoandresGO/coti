@@ -111,12 +111,12 @@ async def friendly_http_error(request: Request, exc: StarletteHTTPException):
     path = request.url.path
     if exc.status_code == 404 and path.startswith("/c/"):
         ctx = {
-            "icon": "🔗",
-            "title": "Este enlace no está disponible",
-            "message": "No encontramos una propuesta con este enlace. Es posible que haya sido reemplazado por uno nuevo o que la cotización ya no esté vigente.",
+            "icon": "🔒",
+            "title": "No tienes acceso a esta propuesta",
+            "message": "El enlace que usaste no es válido o ya no tiene permiso para ver esta cotización.",
             "tips": [
                 "Verifica que copiaste el enlace completo, sin espacios ni caracteres de más.",
-                "Si recibiste el enlace hace tiempo, pide a quien te lo envió que te comparta el enlace actualizado.",
+                "Solicita un nuevo enlace de acceso a quien te envió la propuesta.",
             ],
         }
     elif exc.status_code == 404:
