@@ -1014,7 +1014,97 @@
         .catch(() => uiAlert('Copia el enlace manualmente', url, { icon: '📋' }));
     }
 
+    // ==========================================
+    // CIERRE DE SESIÓN POR INACTIVIDAD
+    // ==========================================
+    const SESSION_TIMEOUT_MS = {{ session_timeout_minutes|default(30) }} * 60 * 1000;
+    const SESSION_WARNING_MS = Math.min(60 * 1000, SESSION_TIMEOUT_MS / 2);  // aviso 1 minuto antes
+    const PING_EVERY_MS = 60 * 1000;
+    let lastActivity = Date.now();
+    let lastPing = Date.now();
+    let idleWarningOpen = false;
+    let loggingOut = false;
+
+    function logoutForInactivity() {
+      if (loggingOut) return;
+      loggingOut = true;
+      window.onbeforeunload = null;
+      savedSnapshot = formSnapshot && isEditorOpen() ? formSnapshot() : savedSnapshot;  // evita el aviso del navegador
+      const next = location.pathname + location.search;
+      window.location.href = '/logout?motivo=inactividad&next=' + encodeURIComponent(next);
+    }
+
+    async function pingSession() {
+      lastPing = Date.now();
+      try {
+        const resp = await fetch('/api/session/ping', { method: 'POST' });
+        if (resp.status === 401) logoutForInactivity();
+      } catch (e) {}
+    }
+
+    function registerActivity() {
+      if (idleWarningOpen || loggingOut) return;
+      lastActivity = Date.now();
+      // Renueva la sesión en el servidor como máximo una vez por minuto
+      if (Date.now() - lastPing > PING_EVERY_MS) pingSession();
+    }
+
+    ['mousedown', 'keydown', 'touchstart', 'input', 'wheel'].forEach(evt =>
+      window.addEventListener(evt, registerActivity, { passive: true, capture: true }));
+
+    async function showIdleWarning() {
+      idleWarningOpen = true;
+      const backdrop = document.createElement('div');
+      backdrop.className = 'ui-dialog-backdrop';
+      backdrop.innerHTML = `
+        <div class="ui-dialog danger" role="alertdialog" aria-modal="true">
+          <div class="ui-dialog-icon">⏳</div>
+          <div class="ui-dialog-title">¿Sigues ahí?</div>
+          <div class="ui-dialog-message">Por seguridad, tu sesión se cerrará en <strong id="idleCountdown">60</strong> segundos por inactividad. Los cambios sin guardar se perderán.</div>
+          <div class="ui-dialog-actions">
+            <button type="button" class="btn btn-secondary" data-act="logout">Cerrar sesión</button>
+            <button type="button" class="btn btn-primary" data-act="stay" style="background: linear-gradient(135deg, #4F46E5 0%, #4338CA 100%); box-shadow: 0 4px 12px rgba(79,70,229,0.3);">Seguir conectado</button>
+          </div>
+        </div>`;
+      document.body.appendChild(backdrop);
+      backdrop.querySelector('[data-act="stay"]').focus();
+
+      const tick = setInterval(() => {
+        const left = Math.max(0, Math.ceil((lastActivity + SESSION_TIMEOUT_MS - Date.now()) / 1000));
+        const el = document.getElementById('idleCountdown');
+        if (el) el.textContent = left;
+      }, 250);
+
+      const close = () => { clearInterval(tick); backdrop.remove(); idleWarningOpen = false; };
+      backdrop.addEventListener('click', async (e) => {
+        const btn = e.target.closest('[data-act]');
+        if (!btn) return;
+        if (btn.dataset.act === 'logout') { close(); window.location.href = '/logout'; return; }
+        close();
+        lastActivity = Date.now();
+        await pingSession();
+        showToast('✔ Sesión extendida');
+      });
+      backdrop._close = close;
+    }
+
+    setInterval(() => {
+      if (loggingOut) return;
+      const idle = Date.now() - lastActivity;
+      if (idle >= SESSION_TIMEOUT_MS) {
+        logoutForInactivity();
+      } else if (idle >= SESSION_TIMEOUT_MS - SESSION_WARNING_MS && !idleWarningOpen) {
+        showIdleWarning();
+      }
+    }, 1000);
+
+    // Si el equipo estuvo suspendido o la pestaña en segundo plano, revisar al volver
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && Date.now() - lastActivity >= SESSION_TIMEOUT_MS) logoutForInactivity();
+    });
+
     window.addEventListener('beforeunload', (e) => {
+      if (loggingOut) return;
       if (hasUnsavedChanges()) { e.preventDefault(); e.returnValue = ''; }
     });
 

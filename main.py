@@ -3,6 +3,7 @@ import unicodedata
 from urllib.parse import quote
 import hmac
 import hashlib
+import time
 from fastapi import FastAPI, Request, HTTPException, Form
 from fastapi.responses import HTMLResponse, Response, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -33,22 +34,54 @@ ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin123")
 SECRET_KEY = os.environ.get("SECRET_KEY", "barcam_myfinces_secret_key_2026_xyz")
 COOKIE_NAME = "admin_session_token"
+# Minutos sin actividad antes de cerrar la sesión del administrador
+try:
+    SESSION_TIMEOUT_MINUTES = max(1, int(os.environ.get("SESSION_TIMEOUT_MINUTES", "30")))
+except ValueError:
+    SESSION_TIMEOUT_MINUTES = 30
+SESSION_TIMEOUT_SECONDS = SESSION_TIMEOUT_MINUTES * 60
+
+
+def _sign(payload: str) -> str:
+    return hmac.new(SECRET_KEY.encode(), payload.encode(), hashlib.sha256).hexdigest()
+
 
 def create_session_token(username: str) -> str:
-    """Genera un token seguro firmado con HMAC."""
-    sig = hmac.new(SECRET_KEY.encode(), username.encode(), hashlib.sha256).hexdigest()
-    return f"{username}:{sig}"
+    """Token firmado con HMAC que incluye la hora de la última actividad."""
+    payload = f"{username}:{int(time.time())}"
+    return f"{payload}:{_sign(payload)}"
+
 
 def verify_session_token(token: str) -> bool:
-    """Valida la autenticidad del token de sesión administrativa."""
-    if not token or ":" not in token:
+    """Valida firma, usuario y que no hayan pasado más de SESSION_TIMEOUT_MINUTES sin actividad."""
+    if not token or token.count(":") < 2:
         return False
     try:
-        username, sig = token.split(":", 1)
-        expected_sig = hmac.new(SECRET_KEY.encode(), username.encode(), hashlib.sha256).hexdigest()
-        return hmac.compare_digest(sig, expected_sig) and username == ADMIN_USERNAME
+        payload, sig = token.rsplit(":", 1)
+        username, last_seen = payload.rsplit(":", 1)
+        if not hmac.compare_digest(sig, _sign(payload)) or username != ADMIN_USERNAME:
+            return False
+        elapsed = time.time() - int(last_seen)
+        return -60 <= elapsed <= SESSION_TIMEOUT_SECONDS
     except Exception:
         return False
+
+
+def set_session_cookie(response, username: str):
+    response.set_cookie(
+        key=COOKIE_NAME,
+        value=create_session_token(username),
+        max_age=SESSION_TIMEOUT_SECONDS,
+        httponly=True,
+        samesite="lax",
+        secure=os.environ.get("COOKIE_SECURE", "true").lower() != "false",
+    )
+
+
+def safe_next(url: str) -> str:
+    """Solo permite redirigir a rutas internas (evita //sitio-externo.com)."""
+    url = url or "/"
+    return url if url.startswith("/") and not url.startswith("//") and "\\" not in url else "/"
 
 def is_admin_authenticated(request: Request) -> bool:
     """Verifica si la petición proviene de un administrador autenticado."""
@@ -61,14 +94,19 @@ def is_admin_authenticated(request: Request) -> bool:
 # ==========================================
 
 @app.get("/login", response_class=HTMLResponse)
-async def login_page(request: Request, next: str = "/"):
+async def login_page(request: Request, next: str = "/", motivo: str = ""):
     """Página de acceso para administradores."""
+    next = safe_next(next)
     if is_admin_authenticated(request):
-        return RedirectResponse(url=next if next.startswith("/") else "/", status_code=303)
-    
+        return RedirectResponse(url=next, status_code=303)
+
+    notice = None
+    if motivo == "inactividad":
+        notice = f"Tu sesión se cerró tras {SESSION_TIMEOUT_MINUTES} minutos de inactividad. Vuelve a ingresar."
     return templates.TemplateResponse(request, "login.html", {
         "next_url": next,
-        "error": None
+        "error": None,
+        "notice": notice
     })
 
 
@@ -78,20 +116,11 @@ async def login_submit(request: Request):
     form_data = await request.form()
     username = form_data.get("username", "").strip()
     password = form_data.get("password", "").strip()
-    next_url = form_data.get("next", "/")
-    if not next_url.startswith("/"):
-        next_url = "/"
+    next_url = safe_next(form_data.get("next", "/"))
 
     if hmac.compare_digest(username, ADMIN_USERNAME) and hmac.compare_digest(password, ADMIN_PASSWORD):
-        token = create_session_token(username)
         response = RedirectResponse(url=next_url, status_code=303)
-        response.set_cookie(
-            key=COOKIE_NAME,
-            value=token,
-            max_age=86400 * 30,  # 30 días de vigencia
-            httponly=True,
-            samesite="lax"
-        )
+        set_session_cookie(response, username)
         return response
 
     return templates.TemplateResponse(request, "login.html", {
@@ -101,10 +130,33 @@ async def login_submit(request: Request):
 
 
 @app.get("/logout")
-async def logout():
+async def logout(motivo: str = "", next: str = "/"):
     """Cierra la sesión administrativa."""
-    response = RedirectResponse(url="/login", status_code=303)
+    url = "/login"
+    if motivo == "inactividad":
+        url = f"/login?motivo=inactividad&next={quote(safe_next(next))}"
+    response = RedirectResponse(url=url, status_code=303)
     response.delete_cookie(COOKIE_NAME)
+    return response
+
+
+@app.post("/api/session/ping")
+async def session_ping(request: Request):
+    """El panel lo llama cuando hay actividad del usuario para mantener la sesión viva."""
+    if not is_admin_authenticated(request):
+        raise HTTPException(status_code=401, detail="Sesión expirada")
+    return {"status": "ok", "timeout_minutes": SESSION_TIMEOUT_MINUTES}
+
+
+@app.middleware("http")
+async def refresh_admin_session(request: Request, call_next):
+    """Cada petición del administrador renueva el contador de inactividad (sesión deslizante)."""
+    response = await call_next(request)
+    path = request.url.path
+    if (path not in ("/logout", "/login") and not path.startswith(("/static", "/c/"))
+            and response.status_code < 400 and is_admin_authenticated(request)
+            and "set-cookie" not in response.headers):
+        set_session_cookie(response, ADMIN_USERNAME)
     return response
 
 
@@ -125,6 +177,7 @@ async def admin_dashboard(request: Request, id: str = ""):
         initial_data = storage.get_quotation(quotes[0]["id"]) if quotes else storage.DEFAULT_PROPOSAL
     
     return templates.TemplateResponse(request, "admin.html", {
+        "session_timeout_minutes": SESSION_TIMEOUT_MINUTES,
         "initial_data": initial_data,
         "quotes_list": quotes,
         "admin_user": ADMIN_USERNAME

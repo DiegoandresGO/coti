@@ -144,6 +144,13 @@
         <p class="login-subtitle">Ingresa tus credenciales autorizadas para crear o modificar propuestas</p>
       </div>
 
+      {% if notice %}
+      <div class="error-alert" style="background: rgba(99, 102, 241, 0.15); border-color: rgba(129, 140, 248, 0.45); color: #E0E7FF;">
+        <span>🔒</span>
+        <span>{{ notice }}</span>
+      </div>
+      {% endif %}
+
       {% if error %}
       <div class="error-alert">
         <span>⚠️</span>
