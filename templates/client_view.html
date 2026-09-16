@@ -6,11 +6,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="/static/img/icon.svg">
+  <script src="/static/js/theme.js"></script>
   <meta name="theme-color" content="#4F46E5">
   <meta name="robots" content="noindex, nofollow">
   <meta name="referrer" content="no-referrer">
   <title>{{ data.project_title }} — Propuesta Técnico-Comercial ({{ data.quote_number }})</title>
-  <link rel="stylesheet" href="/static/css/style.css?v=5">
+  <link rel="stylesheet" href="/static/css/style.css?v=6">
   <style>
     /* Estilos complementarios para la vista interactiva */
     @media (max-width: 640px) {
@@ -66,6 +67,7 @@
         <span>{{ data.company_name }}</span>
       </a>
       <div class="nav-actions">
+        <button type="button" class="theme-toggle" onclick="toggleTheme()" aria-label="Cambiar entre modo claro y oscuro" title="Modo claro / oscuro"><span class="theme-knob"></span></button>
         <span class="quote-id-label" style="font-size: 13px; color: var(--slate-500); font-weight: 600;">
           Propuesta N°: <strong style="color: var(--primary);">{{ data.quote_number }}</strong>
         </span>
