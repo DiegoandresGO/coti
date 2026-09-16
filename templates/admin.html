@@ -69,11 +69,7 @@
         <span style="font-size: 12px; color: var(--slate-500); font-weight: 700; background: var(--slate-100); padding: 5px 10px; border-radius: var(--radius-sm); border: 1px solid var(--slate-200);">
           👤 Admin: <strong style="color: var(--primary);">{{ admin_user|default('admin') }}</strong>
         </span>
-        <a id="navClientPortalLink" href="#" target="_blank" class="btn btn-secondary btn-sm editor-only" style="border-color: var(--primary); color: var(--primary); font-weight: 700;">
-          🌐 Vista del Cliente
-        </a>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="newQuotation()">➕ Nueva</button>
-        <button type="button" class="btn btn-primary btn-sm editor-only" onclick="saveQuotation()">💾 Guardar Cotización</button>
+        <button type="button" class="btn btn-secondary btn-sm editor-only" onclick="showListView()">🏠 Inicio</button>
         <a href="/logout" class="btn btn-secondary btn-sm" style="border-color: var(--rose-200); color: var(--rose-700); font-weight: 700;" title="Cerrar sesión administrativa">
           🚪 Salir
         </a>
@@ -769,7 +765,6 @@
         label.textContent = '✏️ Editando ' + editingId;
         sub.textContent = ' · los cambios se guardan sobre esta cotización';
         history.replaceState(null, '', '/?id=' + encodeURIComponent(editingId));
-        document.getElementById('navClientPortalLink').href = clientUrl(editingId) || '#';
       } else {
         label.textContent = '🆕 Nueva cotización (sin guardar)';
         sub.textContent = ' · se creará al presionar Guardar';
@@ -1048,7 +1043,6 @@
       document.getElementById('shareUrlText').textContent = window.location.origin + url;
       document.getElementById('btnClientView').href = url;
       document.getElementById('btnPdfDownload').href = '/api/cotizaciones/' + encodeURIComponent(id) + '/pdf';
-      document.getElementById('navClientPortalLink').href = url;
     }
 
     async function regenerateLink() {
