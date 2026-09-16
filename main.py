@@ -323,6 +323,11 @@ async def save_quote(request: Request, payload: dict):
     if not isinstance(sel, int) or not 0 <= sel < len(plans):
         sel = next((i for i, p in enumerate(plans) if p.get("is_recommended")), 0)
     payload["selected_plan_index"] = sel
+    # Conservar el registro de la elección del cliente (el panel no lo envía)
+    if existing.get("client_selected_at") and existing.get("selected_plan_index") == sel:
+        payload["client_selected_at"] = existing["client_selected_at"]
+    else:
+        payload.pop("client_selected_at", None)
     payload.pop("access_token", None)
 
     if is_rename and storage.quotation_exists(original_id):

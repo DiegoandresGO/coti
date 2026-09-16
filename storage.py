@@ -300,8 +300,9 @@ def set_selected_plan(quote_id: str, plan_index: int):
         if not 0 <= plan_index < len(data.get("plans", [])):
             return False
         data["selected_plan_index"] = plan_index
-        conn.execute("UPDATE quotations SET data = ?, updated_at = ? WHERE id = ?",
-                     (_clean_for_storage(data), _now(), quote_id.strip()))
+        data["client_selected_at"] = _now()
+        conn.execute("UPDATE quotations SET data = ? WHERE id = ?",
+                     (_clean_for_storage(data), quote_id.strip()))
     return True
 
 
@@ -356,7 +357,7 @@ def _selected_plan(q_data: dict) -> dict:
 def list_quotations():
     init_db()
     with _connect() as conn:
-        rows = conn.execute("SELECT id, data, access_token FROM quotations ORDER BY updated_at DESC, rowid DESC").fetchall()
+        rows = conn.execute("SELECT id, data, access_token, created_at FROM quotations ORDER BY updated_at DESC, rowid DESC").fetchall()
     summary = []
     for row in rows:
         q_data = json.loads(row["data"])
@@ -367,7 +368,10 @@ def list_quotations():
             "client_name": q_data.get("client_name", "Cliente"),
             "client_company": q_data.get("client_company", ""),
             "quote_date": q_data.get("quote_date", ""),
+            "created_at": row["created_at"],
+            "client_selected_at": q_data.get("client_selected_at"),
+            "selected_plan": (f'{_selected_plan(q_data).get("num", "")} — {_selected_plan(q_data).get("name", "")}'
+                              if q_data.get("client_selected_at") else ""),
             "neto": compute_totals(q_data, float(_selected_plan(q_data).get("price", 0) or 0))["neto"],
-            "total": _selected_plan(q_data).get("price", 0)
         })
     return summary
