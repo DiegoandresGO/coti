@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Panel de Cotizaciones — Administración</title>
-  <link rel="stylesheet" href="/static/css/style.css?v=4">
+  <link rel="stylesheet" href="/static/css/style.css?v=5">
   <style>
     @media (max-width: 640px) { .hide-xs { display: none; } }
   </style>
@@ -22,11 +22,11 @@
         <span style="font-size: 12px; color: var(--slate-500); font-weight: 700; background: var(--slate-100); padding: 5px 10px; border-radius: var(--radius-sm); border: 1px solid var(--slate-200);">
           👤 Admin: <strong style="color: var(--primary);">{{ admin_user|default('admin') }}</strong>
         </span>
-        <a id="navClientPortalLink" href="/cotizacion/{{ initial_data.quote_number }}" target="_blank" class="btn btn-secondary btn-sm" style="border-color: var(--primary); color: var(--primary); font-weight: 700;">
+        <a id="navClientPortalLink" href="/cotizacion/{{ initial_data.quote_number }}" target="_blank" class="btn btn-secondary btn-sm editor-only" style="border-color: var(--primary); color: var(--primary); font-weight: 700;">
           🌐 Vista del Cliente
         </a>
         <button type="button" class="btn btn-secondary btn-sm" onclick="newQuotation()">➕ Nueva</button>
-        <button type="button" class="btn btn-primary btn-sm" onclick="saveQuotation()">💾 Guardar Cotización</button>
+        <button type="button" class="btn btn-primary btn-sm editor-only" onclick="saveQuotation()">💾 Guardar Cotización</button>
         <a href="/logout" class="btn btn-secondary btn-sm" style="border-color: var(--rose-200); color: var(--rose-700); font-weight: 700;" title="Cerrar sesión administrativa">
           🚪 Salir
         </a>
@@ -36,25 +36,8 @@
 
   <main class="admin-container">
 
-    <!-- BANNER DE ENLACE COMPARTIBLE (Generado dinámicamente) -->
-    <div id="shareBanner" class="card" style="display: none; background: linear-gradient(135deg, #EEF2FF 0%, #FFFFFF 100%); border: 1.5px solid var(--primary-border); margin-bottom: 24px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
-        <div>
-          <div style="display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; color: var(--emerald-700); background: var(--emerald-50); border: 1px solid var(--emerald-100); padding: 3px 8px; border-radius: 4px; margin-bottom: 6px;">
-            ✔ COTIZACIÓN GUARDADA Y LISTA PARA ENVIAR
-          </div>
-          <h3 style="font-size: 17px; font-weight: 800; color: var(--slate-900);">Enlace Público para el Cliente:</h3>
-          <p id="shareUrlText" style="font-size: 13.5px; color: var(--primary); font-family: monospace; font-weight: 700; margin-top: 4px;"></p>
-        </div>
-        <div style="display: flex; gap: 10px;">
-          <button type="button" class="btn btn-secondary btn-sm" onclick="copyShareUrl()">📋 Copiar Enlace</button>
-          <a id="btnClientView" href="#" target="_blank" class="btn btn-secondary btn-sm">🌐 Ver como Cliente</a>
-          <a id="btnPdfDownload" href="#" target="_blank" class="btn btn-primary btn-sm">📥 Descargar PDF</a>
-        </div>
-      </div>
-    </div>
-
-
+    <!-- VISTA LISTADO -->
+    <div id="listView">
     <!-- LISTADO DE COTIZACIONES -->
     <div class="card" id="quotesCard">
       <div class="section-header" style="justify-content: space-between; flex-wrap: wrap; gap: 10px;">
@@ -80,9 +63,32 @@
       </div>
     </div>
 
+    </div>
+
+    <div id="editorView" hidden>
+    <!-- BANNER DE ENLACE COMPARTIBLE (Generado dinámicamente) -->
+    <div id="shareBanner" class="card" style="display: none; background: linear-gradient(135deg, #EEF2FF 0%, #FFFFFF 100%); border: 1.5px solid var(--primary-border); margin-bottom: 24px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+        <div>
+          <div style="display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; color: var(--emerald-700); background: var(--emerald-50); border: 1px solid var(--emerald-100); padding: 3px 8px; border-radius: 4px; margin-bottom: 6px;">
+            ✔ COTIZACIÓN GUARDADA Y LISTA PARA ENVIAR
+          </div>
+          <h3 style="font-size: 17px; font-weight: 800; color: var(--slate-900);">Enlace Público para el Cliente:</h3>
+          <p id="shareUrlText" style="font-size: 13.5px; color: var(--primary); font-family: monospace; font-weight: 700; margin-top: 4px;"></p>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="copyShareUrl()">📋 Copiar Enlace</button>
+          <a id="btnClientView" href="#" target="_blank" class="btn btn-secondary btn-sm">🌐 Ver como Cliente</a>
+          <a id="btnPdfDownload" href="#" target="_blank" class="btn btn-primary btn-sm">📥 Descargar PDF</a>
+        </div>
+      </div>
+    </div>
+
+
     <!-- INDICADOR DE EDICIÓN -->
-    <div id="editingBar" class="card" style="scroll-margin-top: 140px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; border-left: 4px solid var(--primary);">
-      <div style="font-size: 14px;">
+    <div id="editingBar" class="card" style="padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; border-left: 4px solid var(--primary);">
+      <div style="font-size: 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="showListView()">← Volver al listado</button>
         <span id="editingLabel" style="font-weight: 800; color: var(--slate-900);"></span>
         <span id="editingSub" style="color: var(--slate-500); font-size: 13px;"></span>
       </div>
@@ -337,6 +343,7 @@
         </button>
       </div>
     </form>
+    </div>
   </main>
 
   <script>
@@ -653,7 +660,6 @@
       } else {
         label.textContent = '🆕 Nueva cotización (sin guardar)';
         sub.textContent = ' · se creará al presionar Guardar';
-        history.replaceState(null, '', '/');
         document.getElementById('shareBanner').style.display = 'none';
       }
       document.getElementById('btnDuplicate').disabled = !editingId;
@@ -673,8 +679,8 @@
       tbody.innerHTML = rows.map(x => {
         const active = editingId && x.id.toUpperCase() === editingId.toUpperCase();
         const id = encodeURIComponent(x.id);
-        return `<tr style="${active ? 'outline: 2px solid var(--primary); outline-offset: -2px;' : ''}">
-          <td><strong style="color: var(--primary);">${escapeHtml(x.id)}</strong>${active ? ' <span style="font-size: 11px; color: var(--primary);">(abierta)</span>' : ''}<br><span style="font-size: 12px; color: var(--slate-500);">${escapeHtml(x.quote_date)}</span></td>
+        return `<tr>
+          <td><strong style="color: var(--primary);">${escapeHtml(x.id)}</strong><br><span style="font-size: 12px; color: var(--slate-500);">${escapeHtml(x.quote_date)}</span></td>
           <td><strong>${escapeHtml(x.client_name || '—')}</strong><br><span style="font-size: 12px; color: var(--slate-500);">${escapeHtml(x.client_company)}</span></td>
           <td>${escapeHtml(x.project_title)}</td>
           <td><strong>${formatCOP(x.total)}</strong></td>
@@ -712,19 +718,36 @@
       return confirm('¿Continuar? Los cambios que no hayas guardado en la cotización abierta se perderán.');
     }
 
+    function isEditorOpen() {
+      return !document.getElementById('editorView').hidden;
+    }
+
+    function showEditorView(tab) {
+      document.getElementById('listView').hidden = true;
+      document.getElementById('editorView').hidden = false;
+      document.querySelectorAll('.editor-only').forEach(el => el.hidden = false);
+      switchTab(tab || 'tabScope');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    async function showListView() {
+      if (!confirmDiscard()) return;
+      document.getElementById('editorView').hidden = true;
+      document.getElementById('listView').hidden = false;
+      document.querySelectorAll('.editor-only').forEach(el => el.hidden = true);
+      history.replaceState(null, '', '/');
+      await refreshQuotesList();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
     function focusEditor() {
-      switchTab('tabScope');
-      const bar = document.getElementById('editingBar');
-      bar.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      bar.style.transition = 'box-shadow 0.3s';
-      bar.style.boxShadow = '0 0 0 3px var(--primary)';
-      setTimeout(() => { bar.style.boxShadow = ''; }, 1200);
+      showEditorView('tabScope');
     }
 
     async function openQuotation(id) {
       // Si ya está abierta, solo llevar al formulario
-      if (editingId && editingId.toUpperCase() === id.toUpperCase()) { focusEditor(); return; }
-      if (!confirmDiscard()) return;
+      if (isEditorOpen() && editingId && editingId.toUpperCase() === id.toUpperCase()) { focusEditor(); return; }
+      if (isEditorOpen() && !confirmDiscard()) return;
       const resp = await fetch('/api/cotizaciones/' + encodeURIComponent(id));
       if (!resp.ok) { alert('No se encontró la cotización ' + id); return refreshQuotesList(); }
       const data = await resp.json();
@@ -736,15 +759,14 @@
     }
 
     async function newQuotation() {
-      if (!confirmDiscard()) return;
+      if (isEditorOpen() && !confirmDiscard()) return;
       const resp = await fetch('/api/cotizaciones/nueva');
       if (resp.status === 401) { window.location.href = '/login?next=/'; return; }
       const data = await resp.json();
       currentProposal = data;
       populateForm(data);
       setEditing('');
-      switchTab('tabMeta');
-      document.getElementById('editingBar').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      showEditorView('tabMeta');
       setTimeout(() => document.getElementById('client_name').focus(), 400);
     }
 
@@ -770,13 +792,12 @@
       const resp = await fetch('/api/cotizaciones/' + encodeURIComponent(id), { method: 'DELETE' });
       if (resp.status === 401) { window.location.href = '/login?next=/'; return; }
       if (!resp.ok) { alert('No se pudo eliminar la cotización.'); }
-      const wasOpen = editingId && editingId.toUpperCase() === id.toUpperCase();
+      if (editingId && editingId.toUpperCase() === id.toUpperCase()) editingId = '';
+      document.getElementById('editorView').hidden = true;
+      document.getElementById('listView').hidden = false;
+      document.querySelectorAll('.editor-only').forEach(el => el.hidden = true);
+      history.replaceState(null, '', '/');
       await refreshQuotesList();
-      if (wasOpen) {
-        editingId = '';
-        if (quotesList.length) { await openQuotationForce(quotesList[0].id); }
-        else { const r = await fetch('/api/cotizaciones/nueva'); const d = await r.json(); currentProposal = d; populateForm(d); setEditing(''); }
-      }
     }
 
     async function openQuotationForce(id) {
@@ -804,10 +825,19 @@
 
     // Inicialización al cargar la página
     document.addEventListener('DOMContentLoaded', () => {
-      populateForm(currentProposal);
-      const exists = quotesList.some(x => x.id.toUpperCase() === String(currentProposal.quote_number || '').toUpperCase());
-      setEditing(exists ? currentProposal.quote_number : '');
-      if (exists) showShareBanner(currentProposal.quote_number);
+      renderQuotesList();
+      // Con ?id=... se abre directamente el editor; si no, se muestra el listado
+      const urlId = new URLSearchParams(location.search).get('id');
+      const exists = urlId && quotesList.some(x => x.id.toUpperCase() === urlId.toUpperCase());
+      if (exists) {
+        populateForm(currentProposal);
+        setEditing(currentProposal.quote_number);
+        showShareBanner(currentProposal.quote_number);
+        showEditorView('tabScope');
+      } else {
+        document.querySelectorAll('.editor-only').forEach(el => el.hidden = true);
+        history.replaceState(null, '', '/');
+      }
     });
   </script>
 </body>
