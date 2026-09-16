@@ -279,7 +279,9 @@
       </div>
     </section>
 
-    <!-- 04. SERVICIOS Y TARIFAS ADICIONALES -->
+    <!-- 04. SERVICIOS Y TARIFAS ADICIONALES (opcional) -->
+    {% set extras = extra_services_flags(data) %}
+    {% if extras.any %}
     <section class="card">
       <div class="section-header">
         <span class="section-num">04</span>
@@ -295,25 +297,32 @@
             </tr>
           </thead>
           <tbody>
+            {% if extras.pentest %}
             <tr>
               <td><strong>Pruebas de Penetración y Seguridad</strong></td>
               <td style="color: var(--slate-600);">{{ data.pentest_desc }}</td>
               <td><strong style="color: var(--primary);">{{ data.pentest_cost }}</strong></td>
             </tr>
+            {% endif %}
+            {% if extras.hourly_dev %}
             <tr>
               <td><strong>Hora de Desarrollo Adicional</strong></td>
               <td style="color: var(--slate-600);">Para nuevos requerimientos o módulos fuera del alcance pactado.</td>
               <td><strong>$ {{ "{:,.0f}".format(data.hourly_rate_dev|float).replace(",", ".") }} COP / hora</strong></td>
             </tr>
+            {% endif %}
+            {% if extras.hourly_supp %}
             <tr>
               <td><strong>Hora de Soporte Extra</strong></td>
               <td style="color: var(--slate-600);">Aplica exclusivamente una vez agotada la bolsa de soporte incluida en el plan.</td>
               <td><strong>$ {{ "{:,.0f}".format(data.hourly_rate_supp|float).replace(",", ".") }} COP / hora</strong></td>
             </tr>
+            {% endif %}
           </tbody>
         </table>
       </div>
     </section>
+    {% endif %}
 
     <!-- 05 & 06. EXCLUSIONES Y LIMITANTES -->
     <div class="grid-2">

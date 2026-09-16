@@ -26,6 +26,7 @@ TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 templates.env.filters["plan_items"] = storage.plan_items
+templates.env.globals["extra_services_flags"] = storage.extra_services_flags
 
 # ==========================================
 # CONFIGURACIÓN DE SEGURIDAD & AUTENTICACIÓN

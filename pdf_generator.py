@@ -438,46 +438,53 @@ def generate_quotation_pdf(data):
     # ==========================
     # 6. SERVICIOS ADICIONALES Y TARIFAS
     # ==========================
-    story.append(Paragraph("<font color='#4F46E5'><b>04.</b></font> SERVICIOS COMPLEMENTARIOS Y BOLSA DE HORAS", section_title_style))
+    if storage.extra_services_flags(data)["any"]:
+        story.append(Paragraph("<font color='#4F46E5'><b>04.</b></font> SERVICIOS COMPLEMENTARIOS Y BOLSA DE HORAS", section_title_style))
     
-    hourly_dev = data.get("hourly_rate_dev", 75000)
-    hourly_supp = data.get("hourly_rate_supp", 50000)
-    pentest_cost = data.get("pentest_cost", "$ 800.000 COP")
-    pentest_desc = data.get("pentest_desc", (
-        "Auditoría técnica OWASP, pruebas de penetración contra inyecciones y fugas de datos en APIs backend y aplicación web, con informe."
-    ))
+        hourly_dev = data.get("hourly_rate_dev", 75000)
+        hourly_supp = data.get("hourly_rate_supp", 50000)
+        pentest_cost = data.get("pentest_cost", "$ 800.000 COP")
+        pentest_desc = data.get("pentest_desc", (
+            "Auditoría técnica OWASP, pruebas de penetración contra inyecciones y fugas de datos en APIs backend y aplicación web, con informe."
+        ))
     
-    extras_data = [
-        [
-            Paragraph("<b>Pruebas de Penetración y Vulnerabilidades</b>", table_cell_bold),
-            Paragraph(pentest_desc, table_cell_style),
-            Paragraph(f"<b>{pentest_cost if isinstance(pentest_cost, str) else format_currency(pentest_cost)}</b>", ParagraphStyle('ExC', parent=table_cell_style, textColor=PRIMARY_BRAND))
-        ],
-        [
-            Paragraph("<b>Hora de Desarrollo Adicional</b>", table_cell_bold),
-            Paragraph("Para nuevos requerimientos, funciones no previstas o cambios de diseño fuera del alcance pactado.", table_cell_style),
-            Paragraph(f"<b>{format_currency(hourly_dev)} / hora</b>", table_cell_style)
-        ],
-        [
-            Paragraph("<b>Hora de Soporte Técnico Extra</b>", table_cell_bold),
-            Paragraph("Aplica exclusivamente una vez agotada la bolsa de soporte técnico incluida en el plan contratado.", table_cell_style),
-            Paragraph(f"<b>{format_currency(hourly_supp)} / hora</b>", table_cell_style)
-        ]
-    ]
+        extras = storage.extra_services_flags(data)
+        extras_data = []
+        if extras["pentest"]:
+            extras_data.append(
+            [
+                Paragraph("<b>Pruebas de Penetración y Vulnerabilidades</b>", table_cell_bold),
+                Paragraph(pentest_desc, table_cell_style),
+                Paragraph(f"<b>{pentest_cost if isinstance(pentest_cost, str) else format_currency(pentest_cost)}</b>", ParagraphStyle('ExC', parent=table_cell_style, textColor=PRIMARY_BRAND))
+            ])
+        if extras["hourly_dev"]:
+            extras_data.append(
+            [
+                Paragraph("<b>Hora de Desarrollo Adicional</b>", table_cell_bold),
+                Paragraph("Para nuevos requerimientos, funciones no previstas o cambios de diseño fuera del alcance pactado.", table_cell_style),
+                Paragraph(f"<b>{format_currency(hourly_dev)} / hora</b>", table_cell_style)
+            ])
+        if extras["hourly_supp"]:
+            extras_data.append(
+            [
+                Paragraph("<b>Hora de Soporte Técnico Extra</b>", table_cell_bold),
+                Paragraph("Aplica exclusivamente una vez agotada la bolsa de soporte técnico incluida en el plan contratado.", table_cell_style),
+                Paragraph(f"<b>{format_currency(hourly_supp)} / hora</b>", table_cell_style)
+            ])
     
-    extras_table = Table(extras_data, colWidths=[150, 270, 120])
-    extras_table.setStyle(TableStyle([
-        ('VALIGN', (0,0), (-1,-1), 'TOP'),
-        ('BOX', (0,0), (-1,-1), 1, BORDER_LIGHT),
-        ('INNERGRID', (0,0), (-1,-1), 0.5, BORDER_LIGHT),
-        ('TOPPADDING', (0,0), (-1,-1), 5),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 5),
-        ('LEFTPADDING', (0,0), (-1,-1), 7),
-        ('RIGHTPADDING', (0,0), (-1,-1), 7),
-        ('BACKGROUND', (0,0), (-1,-1), BG_CARD)
-    ]))
-    story.append(extras_table)
-    story.append(Spacer(1, 9))
+        extras_table = Table(extras_data, colWidths=[150, 270, 120])
+        extras_table.setStyle(TableStyle([
+            ('VALIGN', (0,0), (-1,-1), 'TOP'),
+            ('BOX', (0,0), (-1,-1), 1, BORDER_LIGHT),
+            ('INNERGRID', (0,0), (-1,-1), 0.5, BORDER_LIGHT),
+            ('TOPPADDING', (0,0), (-1,-1), 5),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+            ('LEFTPADDING', (0,0), (-1,-1), 7),
+            ('RIGHTPADDING', (0,0), (-1,-1), 7),
+            ('BACKGROUND', (0,0), (-1,-1), BG_CARD)
+        ]))
+        story.append(extras_table)
+        story.append(Spacer(1, 9))
     
     # ==========================
     # 7. COSTOS NO ASUMIDOS (EXCLUSIONES)

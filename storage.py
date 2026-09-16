@@ -92,6 +92,10 @@ DEFAULT_PROPOSAL = {
     ],
     "selected_plan_index": 1,
     "comparison_rows": DEFAULT_COMPARISON_ROWS,
+    "show_extra_services": True,
+    "show_pentest": True,
+    "show_hourly_dev": True,
+    "show_hourly_supp": True,
     "hourly_rate_dev": 75000,
     "hourly_rate_supp": 50000,
     "pentest_cost": "$ 800.000 COP",
@@ -318,6 +322,18 @@ def set_selected_plan(quote_id: str, plan_index: int):
         conn.execute("UPDATE quotations SET data = ? WHERE id = ?",
                      (_clean_for_storage(data), quote_id.strip()))
     return True
+
+
+def extra_services_flags(data: dict) -> dict:
+    """Qué servicios complementarios se muestran. Las cotizaciones antiguas los muestran todos."""
+    section = data.get("show_extra_services", True) is not False
+    flags = {
+        "pentest": section and data.get("show_pentest", True) is not False,
+        "hourly_dev": section and data.get("show_hourly_dev", True) is not False,
+        "hourly_supp": section and data.get("show_hourly_supp", True) is not False,
+    }
+    flags["any"] = flags["pentest"] or flags["hourly_dev"] or flags["hourly_supp"]
+    return flags
 
 
 def plan_items(features) -> list:

@@ -8,6 +8,14 @@
   <style>
     @media (max-width: 640px) { .hide-xs { display: none; } }
 
+    /* Servicios complementarios opcionales */
+    .switch-label { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 700; color: var(--slate-800); cursor: pointer; }
+    .switch-label input { width: 17px; height: 17px; accent-color: var(--primary); cursor: pointer; }
+    .extra-item { border: 1px solid var(--slate-200); border-radius: var(--radius-sm); padding: 12px 14px; background: #FFFFFF; transition: opacity 0.15s; }
+    .extra-item.is-off { background: var(--slate-50); }
+    .extra-item.is-off .form-group { opacity: 0.45; }
+    @media (max-width: 640px) { .extra-item .grid-2 { grid-template-columns: 1fr !important; } }
+
     /* Editor de la tabla comparativa */
     .cmp-editor { display: flex; flex-direction: column; gap: 8px; overflow-x: auto; }
     .cmp-row { display: grid; gap: 8px; align-items: center; min-width: 0; }
@@ -245,26 +253,46 @@
           <div class="section-header">
             <span class="section-num">04</span>
             <h2 class="section-title">Servicios Complementarios y Tarifas por Hora</h2>
+            <label class="switch-label" style="margin-left: auto;">
+              <input type="checkbox" id="show_extra_services" onchange="updateExtrasUI()">
+              <span>Incluir en la propuesta</span>
+            </label>
           </div>
-          
-          <div class="grid-3">
-            <div class="form-group">
-              <label class="form-label">Valor Hora Desarrollo Extra (COP)</label>
-              <input type="number" id="hourly_rate_dev" class="form-control" step="5000">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Valor Hora Soporte Extra (COP)</label>
-              <input type="number" id="hourly_rate_supp" class="form-control" step="5000">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Costo Pruebas de Penetración / Seguridad</label>
-              <input type="text" id="pentest_cost" class="form-control">
-            </div>
-          </div>
+          <p id="extrasOffNote" style="font-size: 13px; color: var(--slate-500);" hidden>
+            Esta sección no se mostrará al cliente ni en el PDF. Actívala si quieres ofrecer servicios adicionales.
+          </p>
 
-          <div class="form-group">
-            <label class="form-label">Alcance de Pruebas de Penetración y Vulnerabilidades</label>
-            <input type="text" id="pentest_desc" class="form-control">
+          <div id="extrasFields">
+            <p style="font-size: 12.5px; color: var(--slate-500); margin-bottom: 12px;">Marca solo los servicios que aplican para esta cotización.</p>
+            <div class="grid-2">
+              <div class="extra-item" data-extra="hourly_dev">
+                <label class="switch-label"><input type="checkbox" id="show_hourly_dev" onchange="updateExtrasUI()"><span>Hora de desarrollo adicional</span></label>
+                <div class="form-group" style="margin-top: 8px;">
+                  <label class="form-label">Valor por hora (COP)</label>
+                  <input type="number" id="hourly_rate_dev" class="form-control" step="5000">
+                </div>
+              </div>
+              <div class="extra-item" data-extra="hourly_supp">
+                <label class="switch-label"><input type="checkbox" id="show_hourly_supp" onchange="updateExtrasUI()"><span>Hora de soporte extra</span></label>
+                <div class="form-group" style="margin-top: 8px;">
+                  <label class="form-label">Valor por hora (COP)</label>
+                  <input type="number" id="hourly_rate_supp" class="form-control" step="5000">
+                </div>
+              </div>
+            </div>
+            <div class="extra-item" data-extra="pentest" style="margin-top: 12px;">
+              <label class="switch-label"><input type="checkbox" id="show_pentest" onchange="updateExtrasUI()"><span>Pruebas de penetración / seguridad</span></label>
+              <div class="grid-2" style="margin-top: 8px; grid-template-columns: 1fr 2fr;">
+                <div class="form-group">
+                  <label class="form-label">Costo</label>
+                  <input type="text" id="pentest_cost" class="form-control">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Alcance</label>
+                  <input type="text" id="pentest_desc" class="form-control">
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -454,6 +482,11 @@
       document.getElementById('hourly_rate_supp').value = data.hourly_rate_supp || 50000;
       document.getElementById('pentest_cost').value = data.pentest_cost || '';
       document.getElementById('pentest_desc').value = data.pentest_desc || '';
+      document.getElementById('show_extra_services').checked = data.show_extra_services !== false;
+      document.getElementById('show_pentest').checked = data.show_pentest !== false;
+      document.getElementById('show_hourly_dev').checked = data.show_hourly_dev !== false;
+      document.getElementById('show_hourly_supp').checked = data.show_hourly_supp !== false;
+      updateExtrasUI();
 
       document.getElementById('exclusions_text').value = (data.exclusions || []).join('\n');
       document.getElementById('limitations_text').value = (data.limitations || []).join('\n');
@@ -529,6 +562,17 @@
       chk.disabled = !hasIva;
       if (!hasIva) chk.checked = false;
       document.getElementById('rete_iva_pct').disabled = !hasIva;
+    }
+
+    function updateExtrasUI() {
+      const on = document.getElementById('show_extra_services').checked;
+      document.getElementById('extrasFields').hidden = !on;
+      document.getElementById('extrasOffNote').hidden = on;
+      document.querySelectorAll('.extra-item').forEach(item => {
+        const checked = document.getElementById('show_' + item.dataset.extra).checked;
+        item.classList.toggle('is-off', !checked);
+        item.querySelectorAll('.form-control').forEach(inp => inp.disabled = !checked);
+      });
     }
 
     function readPlansFromForm() {
@@ -703,6 +747,10 @@
         hourly_rate_supp: parseFloat(document.getElementById('hourly_rate_supp').value) || 50000,
         pentest_cost: document.getElementById('pentest_cost').value,
         pentest_desc: document.getElementById('pentest_desc').value,
+        show_extra_services: document.getElementById('show_extra_services').checked,
+        show_pentest: document.getElementById('show_pentest').checked,
+        show_hourly_dev: document.getElementById('show_hourly_dev').checked,
+        show_hourly_supp: document.getElementById('show_hourly_supp').checked,
 
         exclusions: document.getElementById('exclusions_text').value.split('\n').filter(s => s.trim()),
         limitations: document.getElementById('limitations_text').value.split('\n').filter(s => s.trim()),
