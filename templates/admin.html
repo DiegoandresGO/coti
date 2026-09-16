@@ -591,23 +591,55 @@
       };
     }
 
+    function showToast(message, type) {
+      let toast = document.getElementById('saveToast');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'saveToast';
+        toast.setAttribute('role', 'status');
+        toast.style.cssText = 'position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 1000; ' +
+          'max-width: calc(100% - 32px); padding: 12px 18px; border-radius: 10px; font-size: 14px; font-weight: 700; ' +
+          'color: #fff; box-shadow: 0 10px 25px rgba(0,0,0,0.25); transition: opacity 0.3s;';
+        document.body.appendChild(toast);
+      }
+      toast.textContent = message;
+      toast.style.background = type === 'error' ? '#BE123C' : '#047857';
+      toast.style.opacity = '1';
+      toast.hidden = false;
+      clearTimeout(toast._timer);
+      toast._timer = setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.hidden = true, 300); },
+        type === 'error' ? 6000 : 3000);
+    }
+
+    let isSaving = false;
     async function saveQuotation() {
-      const data = collectData();
+      if (isSaving) return;
+      const buttons = [...document.querySelectorAll('button[onclick="saveQuotation()"]')];
+      const labels = buttons.map(btn => btn.innerHTML);
+      isSaving = true;
+      buttons.forEach(btn => { btn.disabled = true; btn.innerHTML = '⏳ Guardando…'; });
       try {
+        const data = collectData();
+        if (!data.plans || !data.plans.length) {
+          showToast('⚠️ La cotización debe tener al menos 1 plan.', 'error');
+          return;
+        }
         const resp = await fetch('/api/cotizaciones', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
         });
-        
+
         if (resp.status === 401) {
-          alert('⚠️ Tu sesión de administrador ha expirado o no estás autenticado. Serás redirigido al inicio de sesión.');
-          window.location.href = '/login?next=/';
+          alert('⚠️ Tu sesión de administrador expiró. Vuelve a iniciar sesión; los cambios sin guardar se perderán.');
+          window.location.href = '/login?next=' + encodeURIComponent(location.pathname + location.search);
           return;
         }
 
-        const res = await resp.json();
-        if (res.status === 'ok') {
+        let res = {};
+        try { res = await resp.json(); } catch (e) { res = {}; }
+
+        if (resp.ok && res.status === 'ok') {
           delete data.original_id;
           data.quote_number = res.quote_id;
           currentProposal = data;
@@ -615,12 +647,18 @@
           document.getElementById('quote_number').value = res.quote_id;
           showShareBanner(res.quote_id);
           await refreshQuotesList();
-          window.scrollTo({ top: 0, behavior: 'smooth' });
+          showToast('✔ Cotización ' + res.quote_id + ' guardada correctamente');
         } else {
-          alert('⚠️ ' + (res.detail || res.message || 'No se pudo guardar'));
+          const detail = typeof res.detail === 'string' ? res.detail
+            : (res.message || `No se pudo guardar (error ${resp.status}).`);
+          showToast('⚠️ ' + detail, 'error');
         }
       } catch (err) {
-        alert('Error al guardar la cotización: ' + err.message);
+        console.error(err);
+        showToast('⚠️ Error al guardar: ' + err.message, 'error');
+      } finally {
+        isSaving = false;
+        buttons.forEach((btn, i) => { btn.disabled = false; btn.innerHTML = labels[i]; });
       }
     }
 
