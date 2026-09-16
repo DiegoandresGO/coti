@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Cotizador Pro">
+  <defs>
+    <linearGradient id="bg" x1="6" y1="4" x2="58" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#6366F1"/>
+      <stop offset="0.55" stop-color="#4F46E5"/>
+      <stop offset="1" stop-color="#312E81"/>
+    </linearGradient>
+    <linearGradient id="spark" x1="36" y1="34" x2="58" y2="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#34D399"/>
+      <stop offset="1" stop-color="#059669"/>
+    </linearGradient>
+  </defs>
+  <!-- Fondo -->
+  <rect x="2" y="2" width="60" height="60" rx="16" fill="url(#bg)"/>
+  <circle cx="54" cy="8" r="18" fill="#FFFFFF" opacity="0.08"/>
+  <!-- Documento con esquina doblada -->
+  <path d="M17 13h19l10 10v25a4 4 0 0 1-4 4H17a4 4 0 0 1-4-4V17a4 4 0 0 1 4-4z" fill="#FFFFFF"/>
+  <path d="M36 13v7a3 3 0 0 0 3 3h7z" fill="#C7D2FE"/>
+  <!-- Barras de planes (opciones crecientes) -->
+  <rect x="19" y="36" width="5" height="9" rx="1.5" fill="#A5B4FC"/>
+  <rect x="26.5" y="31" width="5" height="14" rx="1.5" fill="#818CF8"/>
+  <rect x="34" y="26" width="5" height="19" rx="1.5" fill="#4F46E5"/>
+  <!-- Líneas de texto -->
+  <rect x="19" y="19" width="12" height="3" rx="1.5" fill="#E0E7FF"/>
+  <!-- Sello de aprobación -->
+  <circle cx="46" cy="46" r="11" fill="url(#spark)" stroke="#312E81" stroke-width="3"/>
+  <path d="M41 46.2l3.4 3.4 6.6-7" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
