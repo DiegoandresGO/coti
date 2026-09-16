@@ -4,6 +4,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
   <title>{{ data.project_title }} — Propuesta Técnico-Comercial ({{ data.quote_number }})</title>
   <link rel="stylesheet" href="/static/css/style.css?v=5">
   <style>
@@ -64,7 +66,7 @@
         <span class="quote-id-label" style="font-size: 13px; color: var(--slate-500); font-weight: 600;">
           Propuesta N°: <strong style="color: var(--primary);">{{ data.quote_number }}</strong>
         </span>
-        <a id="navPdfBtn" href="/api/cotizaciones/{{ data.quote_number }}/pdf?plan_index={{ sel_idx }}" target="_blank" class="btn btn-primary btn-sm">
+        <a id="navPdfBtn" href="/c/{{ data.access_token }}/pdf?plan_index={{ sel_idx }}" target="_blank" class="btn btn-primary btn-sm">
           📥 <span class="hide-xs">Descargar </span>PDF
         </a>
       </div>
@@ -432,7 +434,7 @@
           <div style="font-size: 14px; font-weight: 700; color: var(--slate-900);">¿Conforme con la propuesta?</div>
           <div style="font-size: 12.5px; color: var(--slate-500);">Descarga el PDF formal para archivar, imprimir o proceder con la contratación.</div>
         </div>
-        <a id="ctaPdfBtn" href="/api/cotizaciones/{{ data.quote_number }}/pdf?plan_index={{ sel_idx }}" target="_blank" class="btn btn-primary btn-lg">
+        <a id="ctaPdfBtn" href="/c/{{ data.access_token }}/pdf?plan_index={{ sel_idx }}" target="_blank" class="btn btn-primary btn-lg">
           📥 Descargar Propuesta Oficial en PDF
         </a>
       </div>
@@ -449,7 +451,7 @@
         <span class="kpi-label">Total: </span> <strong id="floatingTotalText" style="color: #67E8F9;">$ 4.000.000 COP</strong>
       </div>
       <div style="display: flex; gap: 10px; flex-wrap: nowrap;">
-        <a id="floatingPdfBtn" href="/api/cotizaciones/{{ data.quote_number }}/pdf?plan_index={{ sel_idx }}" target="_blank" class="btn btn-primary btn-sm">
+        <a id="floatingPdfBtn" href="/c/{{ data.access_token }}/pdf?plan_index={{ sel_idx }}" target="_blank" class="btn btn-primary btn-sm">
           📥 <span class="hide-xs">Descargar </span>PDF<span class="hide-xs"> con este Plan</span>
         </a>
       </div>
@@ -550,7 +552,7 @@
       document.getElementById('floatingTotalText').textContent = formatCOP(retentions.length ? netoVal : totalVal);
 
       // 5. Actualizar Enlaces de Descarga de PDF
-      const pdfUrl = `/api/cotizaciones/${quoteData.quote_number}/pdf?plan_index=${index}`;
+      const pdfUrl = `/c/${quoteData.access_token}/pdf?plan_index=${index}`;
       document.getElementById('navPdfBtn').href = pdfUrl;
       document.getElementById('ctaPdfBtn').href = pdfUrl;
       document.getElementById('floatingPdfBtn').href = pdfUrl;
@@ -575,7 +577,7 @@
 
       // 7. Notificar silenciosamente al backend para guardar preferencia
       try {
-        fetch(`/api/cotizaciones/${quoteData.quote_number}/select-plan`, {
+        fetch(`/c/${quoteData.access_token}/select-plan`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ plan_index: index })

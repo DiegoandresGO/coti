@@ -22,7 +22,7 @@
         <span style="font-size: 12px; color: var(--slate-500); font-weight: 700; background: var(--slate-100); padding: 5px 10px; border-radius: var(--radius-sm); border: 1px solid var(--slate-200);">
           👤 Admin: <strong style="color: var(--primary);">{{ admin_user|default('admin') }}</strong>
         </span>
-        <a id="navClientPortalLink" href="/cotizacion/{{ initial_data.quote_number }}" target="_blank" class="btn btn-secondary btn-sm editor-only" style="border-color: var(--primary); color: var(--primary); font-weight: 700;">
+        <a id="navClientPortalLink" href="#" target="_blank" class="btn btn-secondary btn-sm editor-only" style="border-color: var(--primary); color: var(--primary); font-weight: 700;">
           🌐 Vista del Cliente
         </a>
         <button type="button" class="btn btn-secondary btn-sm" onclick="newQuotation()">➕ Nueva</button>
@@ -78,6 +78,7 @@
         </div>
         <div style="display: flex; gap: 10px;">
           <button type="button" class="btn btn-secondary btn-sm" onclick="copyShareUrl()">📋 Copiar Enlace</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="regenerateLink()" title="Invalida el enlace actual y crea uno nuevo">🔄 Nuevo Enlace</button>
           <a id="btnClientView" href="#" target="_blank" class="btn btn-secondary btn-sm">🌐 Ver como Cliente</a>
           <a id="btnPdfDownload" href="#" target="_blank" class="btn btn-primary btn-sm">📥 Descargar PDF</a>
         </div>
@@ -642,6 +643,7 @@
         if (resp.ok && res.status === 'ok') {
           delete data.original_id;
           data.quote_number = res.quote_id;
+          data.access_token = res.access_token;
           currentProposal = data;
           setEditing(res.quote_id);
           document.getElementById('quote_number').value = res.quote_id;
@@ -694,7 +696,7 @@
         label.textContent = '✏️ Editando ' + editingId;
         sub.textContent = ' · los cambios se guardan sobre esta cotización';
         history.replaceState(null, '', '/?id=' + encodeURIComponent(editingId));
-        document.getElementById('navClientPortalLink').href = '/cotizacion/' + encodeURIComponent(editingId);
+        document.getElementById('navClientPortalLink').href = clientUrl(editingId) || '#';
       } else {
         label.textContent = '🆕 Nueva cotización (sin guardar)';
         sub.textContent = ' · se creará al presionar Guardar';
@@ -725,7 +727,7 @@
           <td style="text-align: right;">
             <div style="display: inline-flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end;">
               <button type="button" class="btn btn-secondary btn-sm" onclick="openQuotation(decodeURIComponent('${id}'))">✏️ Editar</button>
-              <a class="btn btn-secondary btn-sm" href="/cotizacion/${id}" target="_blank">🌐 Ver</a>
+              <a class="btn btn-secondary btn-sm" href="/c/${encodeURIComponent(x.access_token || '')}" target="_blank">🌐 Ver</a>
               <a class="btn btn-secondary btn-sm" href="/api/cotizaciones/${id}/pdf" target="_blank">📥 PDF</a>
               <button type="button" class="btn btn-secondary btn-sm" style="color: var(--rose-700);" onclick="deleteQuotation(decodeURIComponent('${id}'))">🗑️</button>
             </div>
@@ -815,6 +817,7 @@
       if (resp.status === 401) { window.location.href = '/login?next=/'; return; }
       const tpl = await resp.json();
       delete data.original_id;
+      delete data.access_token;
       data.quote_number = tpl.quote_number;
       data.quote_date = tpl.quote_date;
       currentProposal = data;
@@ -845,13 +848,42 @@
       currentProposal = data; populateForm(data); setEditing(data.quote_number); showShareBanner(data.quote_number);
     }
 
+    // Enlace seguro del cliente: /c/<código secreto>
+    function tokenFor(id) {
+      if (!id) return '';
+      if (currentProposal && String(currentProposal.quote_number || '').toUpperCase() === id.toUpperCase() && currentProposal.access_token) {
+        return currentProposal.access_token;
+      }
+      const row = quotesList.find(x => x.id.toUpperCase() === id.toUpperCase());
+      return row ? row.access_token : '';
+    }
+
+    function clientUrl(id) {
+      const token = tokenFor(id);
+      return token ? '/c/' + encodeURIComponent(token) : '';
+    }
+
     function showShareBanner(id) {
-      if (!id) return;
-      const enc = encodeURIComponent(id);
+      const url = clientUrl(id);
+      if (!url) return;
       document.getElementById('shareBanner').style.display = 'block';
-      document.getElementById('shareUrlText').textContent = window.location.origin + '/cotizacion/' + enc;
-      document.getElementById('btnClientView').href = '/cotizacion/' + enc;
-      document.getElementById('btnPdfDownload').href = '/api/cotizaciones/' + enc + '/pdf';
+      document.getElementById('shareUrlText').textContent = window.location.origin + url;
+      document.getElementById('btnClientView').href = url;
+      document.getElementById('btnPdfDownload').href = '/api/cotizaciones/' + encodeURIComponent(id) + '/pdf';
+      document.getElementById('navClientPortalLink').href = url;
+    }
+
+    async function regenerateLink() {
+      if (!editingId) return;
+      if (!confirm('¿Generar un enlace nuevo?\n\nEl enlace que ya enviaste al cliente dejará de funcionar y tendrás que enviarle el nuevo.')) return;
+      const resp = await fetch('/api/cotizaciones/' + encodeURIComponent(editingId) + '/regenerar-enlace', { method: 'POST' });
+      if (resp.status === 401) { window.location.href = '/login?next=/'; return; }
+      if (!resp.ok) { showToast('⚠️ No se pudo generar el enlace nuevo.', 'error'); return; }
+      const res = await resp.json();
+      currentProposal.access_token = res.access_token;
+      await refreshQuotesList();
+      showShareBanner(editingId);
+      showToast('✔ Enlace nuevo generado. El anterior ya no funciona.');
     }
 
     function copyShareUrl() {

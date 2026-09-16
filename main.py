@@ -1,4 +1,6 @@
 import os
+import unicodedata
+from urllib.parse import quote
 import hmac
 import hashlib
 from fastapi import FastAPI, Request, HTTPException, Form
@@ -138,19 +140,41 @@ async def admin_alias(request: Request):
 # PORTAL DEL CLIENTE (100% PÚBLICO - SIN RESTRICCIÓN)
 # ==========================================
 
-@app.get("/cotizacion/{quote_id}", response_class=HTMLResponse)
-async def client_view(request: Request, quote_id: str):
+PRIVATE_HEADERS = {
+    "X-Robots-Tag": "noindex, nofollow",
+    "Referrer-Policy": "no-referrer",
+    "Cache-Control": "private, no-store",
+}
+
+
+def _quote_by_token_or_404(token: str) -> dict:
+    data = storage.get_quotation_by_token(token)
+    if not data:
+        raise HTTPException(status_code=404, detail="Enlace no válido o cotización no disponible")
+    return data
+
+
+@app.get("/c/{token}", response_class=HTMLResponse)
+async def client_view(request: Request, token: str):
     """
-    Portal web público para que el cliente visualice su propuesta interactiva.
-    NO REQUIERE LOGIN NI CONTRASEÑA para permitir fácil acceso al cliente.
+    Portal del cliente. Solo se accede con el código secreto del enlace;
+    el número de cotización por sí solo no da acceso.
     """
+    data = _quote_by_token_or_404(token)
+    response = templates.TemplateResponse(request, "client_view.html", {"data": data})
+    response.headers.update(PRIVATE_HEADERS)
+    return response
+
+
+@app.get("/cotizacion/{quote_id}")
+async def legacy_client_view(request: Request, quote_id: str):
+    """Enlace antiguo por número: solo el administrador es redirigido al enlace seguro."""
+    if not is_admin_authenticated(request):
+        raise HTTPException(status_code=404, detail="Enlace no válido")
     data = storage.get_quotation(quote_id)
     if not data:
-        raise HTTPException(status_code=404, detail=f"Cotización {quote_id} no encontrada")
-    
-    return templates.TemplateResponse(request, "client_view.html", {
-        "data": data
-    })
+        raise HTTPException(status_code=404, detail="Cotización no encontrada")
+    return RedirectResponse(url=f"/c/{data['access_token']}", status_code=303)
 
 
 # ==========================================
@@ -201,8 +225,10 @@ async def delete_quote(request: Request, quote_id: str):
 
 
 @app.get("/api/cotizaciones/{quote_id}")
-async def get_quote_data(quote_id: str):
-    """Datos en formato JSON de una cotización específica."""
+async def get_quote_data(request: Request, quote_id: str):
+    """Datos en formato JSON de una cotización específica (requiere admin)."""
+    if not is_admin_authenticated(request):
+        raise HTTPException(status_code=401, detail="No autorizado")
     data = storage.get_quotation(quote_id)
     if not data:
         raise HTTPException(status_code=404, detail="Cotización no encontrada")
@@ -244,6 +270,7 @@ async def save_quote(request: Request, payload: dict):
     if not isinstance(sel, int) or not 0 <= sel < len(plans):
         sel = next((i for i, p in enumerate(plans) if p.get("is_recommended")), 0)
     payload["selected_plan_index"] = sel
+    payload.pop("access_token", None)
 
     if is_rename and storage.quotation_exists(original_id):
         quote_id = storage.rename_quotation(original_id, payload)
@@ -252,55 +279,74 @@ async def save_quote(request: Request, payload: dict):
     return {
         "status": "ok",
         "quote_id": quote_id,
+        "access_token": storage.get_quotation(quote_id)["access_token"],
         "message": f"Cotización {quote_id} guardada correctamente"
     }
 
 
-@app.post("/api/cotizaciones/{quote_id}/select-plan")
-async def select_plan(quote_id: str, payload: dict):
-    """
-    PÚBLICO: Permite al cliente seleccionar su plan preferido sin requerir login.
-    """
+@app.post("/api/cotizaciones/{quote_id}/regenerar-enlace")
+async def regenerate_link(request: Request, quote_id: str):
+    """Invalida el enlace actual del cliente y crea uno nuevo (requiere admin)."""
+    if not is_admin_authenticated(request):
+        raise HTTPException(status_code=401, detail="No autorizado")
+    token = storage.regenerate_access_token(quote_id)
+    if not token:
+        raise HTTPException(status_code=404, detail="Cotización no encontrada")
+    return {"status": "ok", "access_token": token}
+
+
+@app.post("/c/{token}/select-plan")
+async def select_plan(token: str, payload: dict):
+    """El cliente (con enlace válido) elige su plan preferido."""
+    data = _quote_by_token_or_404(token)
     try:
         plan_index = int(payload.get("plan_index", 0))
     except (TypeError, ValueError):
         plan_index = -1
-    result = storage.set_selected_plan(quote_id, plan_index)
-    if result is None:
-        raise HTTPException(status_code=404, detail="Cotización no encontrada")
-    if result:
+    if storage.set_selected_plan(data["quote_number"], plan_index):
         return {"status": "ok", "selected_plan_index": plan_index}
     return {"status": "error", "message": "Índice de plan inválido"}
 
 
-@app.get("/api/cotizaciones/{quote_id}/pdf")
-async def download_quote_pdf(quote_id: str, plan_index: int = None):
-    """
-    PÚBLICO: Genera y descarga el PDF corporativo de alta calidad para el cliente.
-    NO REQUIERE LOGIN NI CONTRASEÑA.
-    """
-    data = storage.get_quotation(quote_id)
-    if not data:
-        raise HTTPException(status_code=404, detail="Cotización no encontrada")
-    
-    # Si se especificó un plan_index en la URL, actualizar la liquidación del PDF
+def _pdf_response(data: dict, plan_index):
+    quote_id = data["quote_number"]
     if plan_index is not None and 0 <= plan_index < len(data.get("plans", [])):
         data = data.copy()
         data["selected_plan_index"] = plan_index
-    
+
     pdf_bytes = pdf_generator.generate_quotation_pdf(data)
-    
+
     client_clean = data.get("client_name", "Cliente").replace(" ", "_")
     plan_label = storage._selected_plan(data).get("num", "Plan").replace(" ", "")
     filename = f"Cotizacion_{quote_id}_{plan_label}_{client_clean}.pdf"
-    
+    ascii_name = unicodedata.normalize("NFKD", filename).encode("ascii", "ignore").decode().replace('"', "")
+
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
         headers={
-            "Content-Disposition": f'inline; filename="{filename}"'
+            # Nombre ASCII para compatibilidad + nombre UTF-8 (tildes) para navegadores modernos
+            "Content-Disposition": f"inline; filename=\"{ascii_name}\"; filename*=UTF-8''{quote(filename)}",
+            **PRIVATE_HEADERS,
         }
     )
+
+
+@app.get("/c/{token}/pdf")
+async def client_pdf(token: str, plan_index: int = None):
+    """PDF para el cliente con enlace válido."""
+    return _pdf_response(_quote_by_token_or_404(token), plan_index)
+
+
+@app.get("/api/cotizaciones/{quote_id}/pdf")
+async def download_quote_pdf(request: Request, quote_id: str, plan_index: int = None):
+    """PDF por número de cotización (requiere admin)."""
+    if not is_admin_authenticated(request):
+        raise HTTPException(status_code=401, detail="No autorizado")
+    data = storage.get_quotation(quote_id)
+    if not data:
+        raise HTTPException(status_code=404, detail="Cotización no encontrada")
+    return _pdf_response(data, plan_index)
 
 
 if __name__ == "__main__":

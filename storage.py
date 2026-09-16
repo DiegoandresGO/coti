@@ -1,5 +1,6 @@
 import json
 import os
+import secrets
 import sqlite3
 import threading
 from datetime import datetime
@@ -171,19 +172,63 @@ def init_db():
                         os.replace(STORAGE_FILE, STORAGE_FILE + ".migrado")
                     except OSError:
                         pass
+            _ensure_token_column(conn)
         _initialized = True
+
+
+def new_access_token() -> str:
+    """Código secreto e impredecible para el enlace del cliente (~128 bits)."""
+    return secrets.token_urlsafe(16)
+
+
+def _ensure_token_column(conn):
+    """Agrega la columna access_token (si falta) y asigna un código a las cotizaciones que no lo tengan."""
+    cols = [r["name"] for r in conn.execute("PRAGMA table_info(quotations)")]
+    if "access_token" not in cols:
+        conn.execute("ALTER TABLE quotations ADD COLUMN access_token TEXT")
+    conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_quotations_token ON quotations(access_token)")
+    for (q_id,) in conn.execute("SELECT id FROM quotations WHERE access_token IS NULL OR access_token = ''").fetchall():
+        conn.execute("UPDATE quotations SET access_token = ? WHERE id = ?", (new_access_token(), q_id))
+
+
+def _row_to_data(row):
+    data = json.loads(row["data"])
+    # El número y el código de acceso vienen siempre del registro
+    data["quote_number"] = row["id"]
+    data["access_token"] = row["access_token"]
+    return data
+
+
+def _clean_for_storage(data: dict) -> str:
+    stored = {k: v for k, v in data.items() if k != "access_token"}
+    return json.dumps(stored, ensure_ascii=False)
+
+
+def get_quotation_by_token(token: str):
+    init_db()
+    token = (token or "").strip()
+    if len(token) < 16:
+        return None
+    with _connect() as conn:
+        row = conn.execute("SELECT id, data, access_token FROM quotations WHERE access_token = ?", (token,)).fetchone()
+    return _row_to_data(row) if row else None
+
+
+def regenerate_access_token(quote_id: str):
+    """Invalida el enlace anterior del cliente y genera uno nuevo."""
+    init_db()
+    token = new_access_token()
+    with _lock, _connect() as conn:
+        cur = conn.execute("UPDATE quotations SET access_token = ?, updated_at = ? WHERE id = ?",
+                           (token, _now(), quote_id.strip()))
+        return token if cur.rowcount else None
 
 
 def get_quotation(quote_id: str):
     init_db()
     with _connect() as conn:
-        row = conn.execute("SELECT id, data FROM quotations WHERE id = ?", (quote_id.strip(),)).fetchone()
-    if not row:
-        return None
-    data = json.loads(row["data"])
-    # El número guardado dentro de los datos siempre coincide con el registro
-    data["quote_number"] = row["id"]
-    return data
+        row = conn.execute("SELECT id, data, access_token FROM quotations WHERE id = ?", (quote_id.strip(),)).fetchone()
+    return _row_to_data(row) if row else None
 
 
 def save_quotation(data: dict) -> str:
@@ -194,10 +239,11 @@ def save_quotation(data: dict) -> str:
             quote_id = _next_quote_number(conn)
             data["quote_number"] = quote_id
         now = _now()
+        # El código de acceso se conserva al editar; solo se crea para cotizaciones nuevas
         conn.execute("""
-            INSERT INTO quotations (id, data, created_at, updated_at) VALUES (?, ?, ?, ?)
+            INSERT INTO quotations (id, data, created_at, updated_at, access_token) VALUES (?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at
-        """, (quote_id, json.dumps(data, ensure_ascii=False), now, now))
+        """, (quote_id, _clean_for_storage(data), now, now, new_access_token()))
     return quote_id
 
 
@@ -234,11 +280,12 @@ def rename_quotation(old_id: str, data: dict) -> str:
     init_db()
     new_id = str(data.get("quote_number", "")).strip()
     with _lock, _connect() as conn:
-        row = conn.execute("SELECT created_at FROM quotations WHERE id = ?", (old_id.strip(),)).fetchone()
+        row = conn.execute("SELECT created_at, access_token FROM quotations WHERE id = ?", (old_id.strip(),)).fetchone()
         created = row["created_at"] if row else _now()
+        token = (row["access_token"] if row else None) or new_access_token()
         conn.execute("DELETE FROM quotations WHERE id = ?", (old_id.strip(),))
-        conn.execute("INSERT INTO quotations (id, data, created_at, updated_at) VALUES (?, ?, ?, ?)",
-                     (new_id, json.dumps(data, ensure_ascii=False), created, _now()))
+        conn.execute("INSERT INTO quotations (id, data, created_at, updated_at, access_token) VALUES (?, ?, ?, ?, ?)",
+                     (new_id, _clean_for_storage(data), created, _now(), token))
     return new_id
 
 
@@ -254,7 +301,7 @@ def set_selected_plan(quote_id: str, plan_index: int):
             return False
         data["selected_plan_index"] = plan_index
         conn.execute("UPDATE quotations SET data = ?, updated_at = ? WHERE id = ?",
-                     (json.dumps(data, ensure_ascii=False), _now(), quote_id.strip()))
+                     (_clean_for_storage(data), _now(), quote_id.strip()))
     return True
 
 
@@ -309,12 +356,13 @@ def _selected_plan(q_data: dict) -> dict:
 def list_quotations():
     init_db()
     with _connect() as conn:
-        rows = conn.execute("SELECT id, data FROM quotations ORDER BY updated_at DESC, rowid DESC").fetchall()
+        rows = conn.execute("SELECT id, data, access_token FROM quotations ORDER BY updated_at DESC, rowid DESC").fetchall()
     summary = []
     for row in rows:
         q_data = json.loads(row["data"])
         summary.append({
             "id": row["id"],
+            "access_token": row["access_token"],
             "project_title": q_data.get("project_title", "Sin título"),
             "client_name": q_data.get("client_name", "Cliente"),
             "client_company": q_data.get("client_company", ""),
