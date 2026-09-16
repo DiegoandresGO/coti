@@ -9,10 +9,11 @@
       <stop offset="0" stop-color="#34D399"/>
       <stop offset="1" stop-color="#059669"/>
     </linearGradient>
+    <clipPath id="clip"><rect x="2" y="2" width="60" height="60" rx="16"/></clipPath>
   </defs>
   <!-- Fondo -->
   <rect x="2" y="2" width="60" height="60" rx="16" fill="url(#bg)"/>
-  <circle cx="54" cy="8" r="18" fill="#FFFFFF" opacity="0.08"/>
+  <circle cx="54" cy="8" r="18" fill="#FFFFFF" opacity="0.08" clip-path="url(#clip)"/>
   <!-- Documento con esquina doblada -->
   <path d="M17 13h19l10 10v25a4 4 0 0 1-4 4H17a4 4 0 0 1-4-4V17a4 4 0 0 1 4-4z" fill="#FFFFFF"/>
   <path d="M36 13v7a3 3 0 0 0 3 3h7z" fill="#C7D2FE"/>

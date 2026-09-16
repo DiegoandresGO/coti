@@ -6,137 +6,127 @@
   <link rel="icon" type="image/svg+xml" href="/static/img/icon.svg">
   <meta name="theme-color" content="#4F46E5">
   <title>Acceso Administrativo — Sistema de Cotizaciones</title>
-  <link rel="stylesheet" href="/static/css/style.css?v=6">
+  <link rel="stylesheet" href="/static/css/style.css?v=7">
+  <script src="/static/js/theme.js"></script>
   <style>
+    /* Colores del login para cada tema */
+    :root {
+      --lg-bg: radial-gradient(circle at top, #EEF2FF 0%, #F8FAFC 55%, #E2E8F0 100%);
+      --lg-card: rgba(255, 255, 255, 0.88);
+      --lg-card-border: rgba(99, 102, 241, 0.22);
+      --lg-card-shadow: 0 20px 40px rgba(15, 23, 42, 0.10), 0 0 35px -5px rgba(79, 70, 229, 0.18);
+      --lg-title: #0F172A;
+      --lg-text: #64748B;
+      --lg-label: #334155;
+      --lg-input-bg: #FFFFFF;
+      --lg-input-border: #CBD5E1;
+      --lg-input-text: #0F172A;
+      --lg-badge-bg: rgba(79, 70, 229, 0.08);
+      --lg-badge-border: rgba(99, 102, 241, 0.3);
+      --lg-badge-text: #4338CA;
+      --lg-accent: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+      --lg-note-bg: #F8FAFC;
+      --lg-note-border: #E2E8F0;
+      --lg-note-strong: #4F46E5;
+      --lg-error-bg: #FFF1F2; --lg-error-border: #FECDD3; --lg-error-text: #BE123C;
+      --lg-notice-bg: #EEF2FF; --lg-notice-border: #C7D2FE; --lg-notice-text: #3730A3;
+    }
+    [data-theme="dark"] {
+      --lg-bg: radial-gradient(circle at top, #111827 0%, #0B0F19 100%);
+      --lg-card: rgba(17, 24, 39, 0.85);
+      --lg-card-border: rgba(99, 102, 241, 0.3);
+      --lg-card-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 35px -5px rgba(79, 70, 229, 0.25);
+      --lg-title: #FFFFFF;
+      --lg-text: #94A3B8;
+      --lg-label: #E2E8F0;
+      --lg-input-bg: rgba(15, 23, 42, 0.8);
+      --lg-input-border: rgba(255, 255, 255, 0.12);
+      --lg-input-text: #FFFFFF;
+      --lg-badge-bg: rgba(79, 70, 229, 0.2);
+      --lg-badge-border: rgba(99, 102, 241, 0.4);
+      --lg-badge-text: #C7D2FE;
+      --lg-accent: linear-gradient(135deg, #818CF8 0%, #C7D2FE 100%);
+      --lg-note-bg: rgba(255, 255, 255, 0.04);
+      --lg-note-border: rgba(255, 255, 255, 0.08);
+      --lg-note-strong: #A5B4FC;
+      --lg-error-bg: rgba(244, 63, 94, 0.15); --lg-error-border: rgba(244, 63, 94, 0.4); --lg-error-text: #FECDD3;
+      --lg-notice-bg: rgba(99, 102, 241, 0.15); --lg-notice-border: rgba(129, 140, 248, 0.45); --lg-notice-text: #E0E7FF;
+    }
+
     body {
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: radial-gradient(circle at top, #111827 0%, #0B0F19 100%);
+      background: var(--lg-bg);
+      background-color: var(--page-bg);
       padding: 20px;
-      color: #FFFFFF;
+      color: var(--lg-title);
     }
-    .login-container {
-      width: 100%;
-      max-width: 440px;
-    }
+    .login-theme-toggle { position: fixed; top: 16px; right: 16px; z-index: 5; }
+    .login-container { width: 100%; max-width: 440px; }
     .login-card {
-      background: rgba(17, 24, 39, 0.85);
+      background: var(--lg-card);
       backdrop-filter: blur(16px);
-      border: 1px solid rgba(99, 102, 241, 0.3);
+      border: 1px solid var(--lg-card-border);
       border-radius: var(--radius-lg);
       padding: 36px 32px;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 35px -5px rgba(79, 70, 229, 0.25);
+      box-shadow: var(--lg-card-shadow);
     }
-    .login-header {
-      text-align: center;
-      margin-bottom: 28px;
-    }
+    .login-header { text-align: center; margin-bottom: 28px; }
     .login-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: rgba(79, 70, 229, 0.2);
-      border: 1px solid rgba(99, 102, 241, 0.4);
-      color: #C7D2FE;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      padding: 4px 12px;
-      border-radius: var(--radius-full);
-      margin-bottom: 12px;
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--lg-badge-bg); border: 1px solid var(--lg-badge-border); color: var(--lg-badge-text);
+      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+      padding: 4px 12px; border-radius: var(--radius-full); margin-bottom: 12px;
     }
-    .login-title {
-      font-size: 22px;
-      font-weight: 800;
-      color: #FFFFFF;
-      letter-spacing: -0.02em;
-    }
-    .login-title span {
-      background: linear-gradient(135deg, #818CF8 0%, #C7D2FE 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    .login-subtitle {
-      font-size: 13px;
-      color: var(--slate-400);
-      margin-top: 6px;
-    }
-    .form-group {
-      margin-bottom: 20px;
-    }
-    .form-label {
-      display: block;
-      font-size: 12.5px;
-      font-weight: 700;
-      color: #E2E8F0;
-      margin-bottom: 8px;
-    }
+    .login-title { font-size: 22px; font-weight: 800; color: var(--lg-title); letter-spacing: -0.02em; }
+    .login-title span { background: var(--lg-accent); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    .login-subtitle { font-size: 13px; color: var(--lg-text); margin-top: 6px; }
+    .form-group { margin-bottom: 20px; }
+    .login-card .form-label { display: block; font-size: 12.5px; font-weight: 700; color: var(--lg-label); margin-bottom: 8px; }
     .form-input {
-      width: 100%;
-      background: rgba(15, 23, 42, 0.8);
-      border: 1.5px solid rgba(255, 255, 255, 0.12);
-      border-radius: var(--radius-sm);
-      padding: 12px 14px;
-      font-size: 14px;
-      color: #FFFFFF;
-      outline: none;
-      transition: all 0.2s;
-      font-family: inherit;
+      width: 100%; background: var(--lg-input-bg); border: 1.5px solid var(--lg-input-border);
+      border-radius: var(--radius-sm); padding: 12px 14px; font-size: 14px; color: var(--lg-input-text);
+      outline: none; transition: all 0.2s; font-family: inherit;
     }
-    .form-input:focus {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.3);
-      background: rgba(15, 23, 42, 1);
+    .form-input::placeholder { color: var(--lg-text); opacity: 0.8; }
+    .form-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.25); }
+    /* Autocompletado del navegador: mantener los colores del tema */
+    .form-input:-webkit-autofill,
+    .form-input:-webkit-autofill:hover,
+    .form-input:-webkit-autofill:focus {
+      -webkit-text-fill-color: var(--lg-input-text);
+      -webkit-box-shadow: 0 0 0 1000px var(--lg-input-bg-solid, #FFFFFF) inset;
+      caret-color: var(--lg-input-text);
+      transition: background-color 9999s ease-in-out 0s;
     }
+    [data-theme="dark"] .form-input:-webkit-autofill,
+    [data-theme="dark"] .form-input:-webkit-autofill:hover,
+    [data-theme="dark"] .form-input:-webkit-autofill:focus { -webkit-box-shadow: 0 0 0 1000px #0F172A inset; }
+    .toggle-pwd { font-size: 11px; color: var(--lg-text); cursor: pointer; background: none; border: none; font-family: inherit; }
     .btn-login {
-      width: 100%;
-      padding: 13px;
-      background: linear-gradient(135deg, #4F46E5 0%, #4338CA 100%);
-      color: #FFFFFF;
-      border: none;
-      border-radius: var(--radius-sm);
-      font-size: 14.5px;
-      font-weight: 700;
-      cursor: pointer;
-      box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4);
-      transition: all 0.2s;
-      margin-top: 10px;
+      width: 100%; padding: 13px; background: linear-gradient(135deg, #4F46E5 0%, #4338CA 100%); color: #FFFFFF;
+      border: none; border-radius: var(--radius-sm); font-size: 14.5px; font-weight: 700; cursor: pointer;
+      box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4); transition: all 0.2s; margin-top: 10px;
     }
-    .btn-login:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 20px rgba(79, 70, 229, 0.55);
-    }
+    .btn-login:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(79, 70, 229, 0.55); }
     .error-alert {
-      background: rgba(244, 63, 94, 0.15);
-      border: 1px solid rgba(244, 63, 94, 0.4);
-      color: #FECDD3;
-      padding: 10px 14px;
-      border-radius: var(--radius-sm);
-      font-size: 13px;
-      margin-bottom: 20px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
+      background: var(--lg-error-bg); border: 1px solid var(--lg-error-border); color: var(--lg-error-text);
+      padding: 10px 14px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 20px;
+      display: flex; align-items: center; gap: 8px;
     }
+    .error-alert.notice { background: var(--lg-notice-bg); border-color: var(--lg-notice-border); color: var(--lg-notice-text); }
     .info-helper {
-      margin-top: 24px;
-      padding: 12px 14px;
-      border-radius: var(--radius-sm);
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      font-size: 12px;
-      color: var(--slate-400);
-      line-height: 1.5;
+      margin-top: 24px; padding: 12px 14px; border-radius: var(--radius-sm);
+      background: var(--lg-note-bg); border: 1px solid var(--lg-note-border);
+      font-size: 12px; color: var(--lg-text); line-height: 1.5;
     }
-    .info-helper strong {
-      color: #A5B4FC;
-    }
+    .info-helper strong { color: var(--lg-note-strong); }
   </style>
 </head>
 <body>
+  <button type="button" class="theme-toggle login-theme-toggle" onclick="toggleTheme()" aria-label="Cambiar entre modo claro y oscuro" title="Modo claro / oscuro"><span class="theme-knob"></span></button>
 
   <div class="login-container">
     <div class="login-card">
@@ -148,7 +138,7 @@
       </div>
 
       {% if notice %}
-      <div class="error-alert" style="background: rgba(99, 102, 241, 0.15); border-color: rgba(129, 140, 248, 0.45); color: #E0E7FF;">
+      <div class="error-alert notice">
         <span>🔒</span>
         <span>{{ notice }}</span>
       </div>
@@ -172,7 +162,7 @@
         <div class="form-group">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
             <label class="form-label" for="password" style="margin-bottom: 0;">Contraseña</label>
-            <span style="font-size: 11px; color: var(--slate-400); cursor: pointer;" onclick="togglePwd()">👁️ Mostrar</span>
+            <span class="toggle-pwd" onclick="togglePwd()">👁️ Mostrar</span>
           </div>
           <input type="password" id="password" name="password" class="form-input" placeholder="••••••••" required>
         </div>
@@ -183,7 +173,7 @@
       </form>
 
       <div class="info-helper">
-        <span style="font-size: 11px; color: var(--slate-500); display: block; margin-top: 6px;">
+        <span style="display: block;">
           💡 Nota: Los clientes abren su propuesta con el enlace seguro que les envías, sin clave ni login.
         </span>
       </div>
