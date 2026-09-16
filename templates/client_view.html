@@ -251,26 +251,20 @@
               </tr>
             </thead>
             <tbody>
+              {% for row in data.comparison_rows or [] %}
               <tr>
-                <td style="text-align: left; font-weight: 600; color: var(--slate-800);">🌐 Aplicación Web Responsive & Backend</td>
-{% set vals = ['<span style="color: var(--emerald-600); font-weight: 800;">✔ Incluida (MVP)</span>', '<span style="color: var(--emerald-600); font-weight: 800;">✔ Incluida Completa</span>', '<span style="color: var(--emerald-600); font-weight: 800;">✔ Incluida Escalable</span>'] %}
-                {% for p in data.plans %}<td>{{ (vals[loop.index0] if loop.index0 < vals|length else vals[-1])|safe }}</td>{% endfor %}
+                <td style="text-align: left; font-weight: 600; color: var(--slate-800);">{{ row.label }}</td>
+                {% for p in data.plans %}
+                {% set val = ((row.get('values') or [])[loop.index0] if loop.index0 < (row.get('values') or [])|length else '')|string|trim %}
+                <td>
+                  {% if not val %}<span style="color: var(--slate-300);">—</span>
+                  {% elif val.startswith('✔') or val.startswith('✓') %}<span style="color: var(--emerald-600); font-weight: 800;">{{ val }}</span>
+                  {% elif val.startswith('✖') or val.startswith('✗') or val.startswith('❌') %}<span style="color: var(--slate-400);">{{ val }}</span>
+                  {% else %}{{ val }}{% endif %}
+                </td>
+                {% endfor %}
               </tr>
-              <tr>
-                <td style="text-align: left; font-weight: 600; color: var(--slate-800);">📱 Aplicación Móvil Android (Archivo APK)</td>
-{% set vals = ['<span style="color: var(--emerald-600); font-weight: 800;">✔ Compilada</span>', '<span style="color: var(--emerald-600); font-weight: 800;">✔ Compilada & Optimizada</span>', '<span style="color: var(--emerald-600); font-weight: 800;">✔ Compilada & Optimizada</span>'] %}
-                {% for p in data.plans %}<td>{{ (vals[loop.index0] if loop.index0 < vals|length else vals[-1])|safe }}</td>{% endfor %}
-              </tr>
-              <tr>
-                <td style="text-align: left; font-weight: 600; color: var(--slate-800);">🏢 Panel Administrativo y Auditoría</td>
-{% set vals = ['<span style="color: var(--slate-400);">Funciones esenciales</span>', '<span style="color: var(--emerald-600); font-weight: 800;">✔ Panel Completo</span>', '<span style="color: var(--emerald-600); font-weight: 800;">✔ Panel Completo + Reportes</span>'] %}
-                {% for p in data.plans %}<td>{{ (vals[loop.index0] if loop.index0 < vals|length else vals[-1])|safe }}</td>{% endfor %}
-              </tr>
-              <tr>
-                <td style="text-align: left; font-weight: 600; color: var(--slate-800);">⚡ Sincronización en la Nube y Base de Datos</td>
-{% set vals = ['<span style="color: var(--emerald-600); font-weight: 800;">✔ Tiempo Real</span>', '<span style="color: var(--emerald-600); font-weight: 800;">✔ Tiempo Real Seguro</span>', '<span style="color: var(--emerald-600); font-weight: 800;">✔ Alta Disponibilidad</span>'] %}
-                {% for p in data.plans %}<td>{{ (vals[loop.index0] if loop.index0 < vals|length else vals[-1])|safe }}</td>{% endfor %}
-              </tr>
+              {% endfor %}
               <tr style="background: var(--primary-light);">
                 <td style="text-align: left; font-weight: 800; color: var(--primary);">⏱️ Horas de Soporte Técnico Incluidas (Sin Costo Mensual)</td>
                 {% for p in data.plans %}
@@ -278,16 +272,6 @@
                   <strong style="color: var(--primary); font-size: 14px;">{{ p.support_hours }}</strong>
                 </td>
                 {% endfor %}
-              </tr>
-              <tr>
-                <td style="text-align: left; font-weight: 600; color: var(--slate-800);">🛡️ Garantía Técnica Directa</td>
-{% set vals = ['30 días calendario', '<strong>30 días calendario</strong>', '<strong>45 días calendario</strong>'] %}
-                {% for p in data.plans %}<td>{{ (vals[loop.index0] if loop.index0 < vals|length else vals[-1])|safe }}</td>{% endfor %}
-              </tr>
-              <tr>
-                <td style="text-align: left; font-weight: 600; color: var(--slate-800);">🎓 Capacitación y Entrega de Manuales</td>
-{% set vals = ['1 hora virtual', '2 horas virtuales', '3 horas virtuales'] %}
-                {% for p in data.plans %}<td>{{ (vals[loop.index0] if loop.index0 < vals|length else vals[-1])|safe }}</td>{% endfor %}
               </tr>
             </tbody>
           </table>

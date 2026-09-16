@@ -8,6 +8,22 @@
   <style>
     @media (max-width: 640px) { .hide-xs { display: none; } }
 
+    /* Editor de la tabla comparativa */
+    .cmp-editor { display: flex; flex-direction: column; gap: 8px; overflow-x: auto; }
+    .cmp-row { display: grid; gap: 8px; align-items: center; min-width: 0; }
+    .cmp-head { font-size: 11.5px; font-weight: 800; color: var(--slate-500); text-transform: uppercase; letter-spacing: 0.03em; }
+    .cmp-row .form-control { padding: 8px 10px; font-size: 13.5px; min-width: 0; }
+    .cmp-row .cmp-label { font-weight: 700; }
+    .cmp-col-label { display: none; font-size: 11px; font-weight: 700; color: var(--slate-500); }
+    @media (max-width: 760px) {
+      .cmp-head { display: none !important; }
+      .cmp-row { grid-template-columns: 1fr auto !important; background: var(--slate-50); border: 1px solid var(--slate-200); border-radius: var(--radius-sm); padding: 10px; }
+      .cmp-row .cmp-label { grid-column: 1 / 2; }
+      .cmp-row .cmp-cell { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 3px; }
+      .cmp-row .cmp-del { grid-column: 2 / 3; grid-row: 1; }
+      .cmp-col-label { display: block; }
+    }
+
     /* Resumen del listado */
     .dash-grid { display: grid; grid-template-columns: minmax(200px, 1fr) minmax(0, 3fr); gap: 14px; margin-bottom: 18px; }
     .dash-card { background: #FFFFFF; border: 1px solid var(--slate-200); border-radius: var(--radius-md); padding: 16px 18px; box-shadow: var(--shadow-sm); min-width: 0; }
@@ -207,6 +223,22 @@
             <!-- Renderizado dinámico de los planes (1 o más) -->
           </div>
           <button type="button" class="btn btn-secondary btn-sm" style="margin-top: 16px;" onclick="addPlan()">➕ Agregar Plan</button>
+        </div>
+
+        <div class="card">
+          <div class="section-header" style="justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span class="section-num">📊</span>
+              <h2 class="section-title">Tabla Comparativa de Planes</h2>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="addComparisonRow()">➕ Agregar Fila</button>
+          </div>
+          <p style="font-size: 13px; color: var(--slate-500); margin-bottom: 14px;">
+            Cada fila es una característica y cada columna un plan. Empieza el texto con <strong style="color: var(--emerald-700);">✔</strong> para mostrarlo en verde
+            o con <strong>✖</strong> si no está incluido. Si dejas un campo vacío se muestra "—".
+            La fila de <em>horas de soporte</em> se agrega automáticamente desde cada plan.
+          </p>
+          <div id="comparisonContainer" class="cmp-editor"></div>
         </div>
 
         <div class="card">
@@ -445,6 +477,7 @@
 
       renderModules(data.modules || []);
       renderPlans(data.plans || []);
+      renderComparison(data.comparison_rows || [], (data.plans || []).map(p => p.name));
     }
 
     function renderModules(modules) {
@@ -532,8 +565,11 @@
     function removePlan(idx) {
       const plans = readPlansFromForm();
       if (plans.length <= 1) { uiAlert('No se puede quitar', 'La propuesta debe tener al menos 1 plan.', { icon: '⚠️' }); return; }
+      const rows = readComparisonFromForm();
+      rows.forEach(r => r.values.splice(idx, 1));
       plans.splice(idx, 1);
       renderPlans(plans);
+      renderComparison(rows, plans.map(p => p.name));
     }
 
     function renderPlans(plans) {
@@ -573,6 +609,54 @@
         `;
         container.appendChild(div);
       });
+      // Mantener las columnas de la tabla comparativa alineadas con los planes
+      if (document.getElementById('comparisonContainer')) {
+        renderComparison(readComparisonFromForm(), plans.map(p => p.name));
+      }
+    }
+
+    // ==========================================
+    // TABLA COMPARATIVA (filas × planes)
+    // ==========================================
+    function readComparisonFromForm() {
+      return [...document.querySelectorAll('#comparisonContainer .cmp-row[data-row]')].map(row => ({
+        label: row.querySelector('.cmp-label').value.trim(),
+        values: [...row.querySelectorAll('.cmp-value')].map(inp => inp.value.trim())
+      }));
+    }
+
+    function renderComparison(rows, planNames) {
+      const container = document.getElementById('comparisonContainer');
+      const n = planNames.length;
+      const cols = `minmax(180px, 1.6fr) repeat(${n}, minmax(130px, 1fr)) 40px`;
+      const head = `<div class="cmp-row cmp-head" style="grid-template-columns: ${cols};">
+          <div>Característica</div>
+          ${planNames.map((name, i) => `<div>Opción ${i + 1}${name ? ' · ' + escapeAttr(name) : ''}</div>`).join('')}
+          <div></div>
+        </div>`;
+      const body = rows.map(row => {
+        const values = row.values || [];
+        return `<div class="cmp-row" data-row style="grid-template-columns: ${cols};">
+          <input type="text" class="form-control cmp-label" value="${escapeAttr(row.label)}" placeholder="Ej: 🛡️ Garantía técnica">
+          ${planNames.map((name, i) => `<label class="cmp-cell"><span class="cmp-col-label">Opción ${i + 1}${name ? ' · ' + escapeAttr(name) : ''}</span>
+            <input type="text" class="form-control cmp-value" value="${escapeAttr(values[i] ?? '')}" placeholder="—"></label>`).join('')}
+          <button type="button" class="btn btn-secondary btn-sm cmp-del" title="Quitar fila" style="color: var(--rose-700); padding: 6px 8px;" onclick="this.closest('.cmp-row').remove()">🗑️</button>
+        </div>`;
+      }).join('');
+      container.innerHTML = head + (rows.length ? body :
+        '<p style="font-size: 13px; color: var(--slate-400); padding: 6px 0;">Sin filas. Solo se mostrará la fila de horas de soporte.</p>');
+    }
+
+    function currentPlanNames() {
+      return readPlansFromForm().map(p => p.name);
+    }
+
+    function addComparisonRow() {
+      const rows = readComparisonFromForm();
+      rows.push({ label: '', values: [] });
+      renderComparison(rows, currentPlanNames());
+      const inputs = document.querySelectorAll('#comparisonContainer .cmp-label');
+      if (inputs.length) inputs[inputs.length - 1].focus();
     }
 
     function collectData() {
@@ -611,6 +695,9 @@
 
         modules: modules,
         plans: plans,
+        comparison_rows: readComparisonFromForm()
+          .filter(r => r.label || r.values.some(Boolean))
+          .map(r => ({ label: r.label, values: plans.map((_, i) => r.values[i] || '') })),
 
         hourly_rate_dev: parseFloat(document.getElementById('hourly_rate_dev').value) || 75000,
         hourly_rate_supp: parseFloat(document.getElementById('hourly_rate_supp').value) || 50000,
