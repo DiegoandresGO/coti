@@ -9,50 +9,36 @@
     @media (max-width: 640px) { .hide-xs { display: none; } }
 
     /* Resumen del listado */
-    .dash-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 18px; }
+    .dash-grid { display: grid; grid-template-columns: minmax(200px, 1fr) minmax(0, 3fr); gap: 14px; margin-bottom: 18px; }
     .dash-card { background: #FFFFFF; border: 1px solid var(--slate-200); border-radius: var(--radius-md); padding: 16px 18px; box-shadow: var(--shadow-sm); min-width: 0; }
     .dash-label { font-size: 12.5px; font-weight: 700; color: var(--slate-500); }
-    .dash-value { font-size: 28px; font-weight: 800; color: var(--slate-900); line-height: 1.2; margin-top: 4px; font-variant-numeric: tabular-nums; }
-    .dash-money { font-size: 20px; overflow-wrap: anywhere; color: var(--primary); }
-    .dash-sub { font-size: 12px; color: var(--slate-400); margin-top: 2px; }
-    .status-pill { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
-    .status-ok { background: #D1FAE5; color: #047857; }
-    .status-wait { background: #FEF3C7; color: #B45309; }
-    @media (max-width: 900px) { .dash-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    .dash-value { font-size: 34px; font-weight: 800; color: var(--slate-900); line-height: 1.2; margin-top: 6px; font-variant-numeric: tabular-nums; }
+    .dash-sub { font-size: 12.5px; color: var(--slate-500); margin-top: 2px; }
+
+    /* Gráfica de barras: cotizaciones por mes */
+    .month-chart { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; align-items: end; height: 132px; margin-top: 30px; }
+    .month-col { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; min-width: 0; position: relative; cursor: default; }
+    .month-count { font-size: 12px; font-weight: 700; color: var(--slate-600); font-variant-numeric: tabular-nums; margin-bottom: 4px; min-height: 16px; }
+    .month-track { width: 100%; max-width: 44px; flex: 1; display: flex; align-items: flex-end; border-bottom: 1px solid var(--slate-200); }
+    .month-bar { width: 100%; background: #6366F1; border-radius: 4px 4px 0 0; min-height: 0; transition: height 0.35s ease, background 0.15s; }
+    .month-bar.is-current { background: #4F46E5; }
+    .month-col:hover .month-bar { background: #4338CA; }
+    .month-name { font-size: 11.5px; color: var(--slate-500); margin-top: 6px; text-transform: capitalize; white-space: nowrap; }
+    .month-tip { position: absolute; bottom: calc(100% - 8px); left: 50%; transform: translateX(-50%); background: var(--dark-900, #0B0F19); color: #FFFFFF;
+      font-size: 12px; padding: 5px 9px; border-radius: 6px; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 0.12s; z-index: 5; }
+    .month-tip { visibility: hidden; }
+    .month-col:hover .month-tip, .month-col:focus .month-tip { opacity: 1; visibility: visible; }
+    /* Tooltips de los extremos alineados hacia adentro para no salirse de la pantalla */
+    .month-col:first-child .month-tip { left: 0; transform: none; }
+    .month-col:last-child .month-tip { left: auto; right: 0; transform: none; }
+    .month-chart { overflow: visible; }
+    .dash-chart-card { overflow: hidden; }
+    @media (max-width: 760px) { .dash-grid { grid-template-columns: 1fr; } }
     @media (max-width: 640px) {
       .dash-grid { gap: 10px; }
       .dash-card { padding: 12px 14px; }
-      .dash-value { font-size: 22px; }
-      .dash-money { font-size: 16px; }
-    }
-
-    /* Diálogos propios (reemplazan confirm/alert del navegador) */
-    .ui-dialog-backdrop {
-      position: fixed; inset: 0; z-index: 2000;
-      background: rgba(11, 15, 25, 0.55); backdrop-filter: blur(3px);
-      display: flex; align-items: center; justify-content: center; padding: 16px;
-      animation: uiFade 0.15s ease-out;
-    }
-    .ui-dialog {
-      width: 100%; max-width: 420px; background: #FFFFFF; border-radius: 16px;
-      border: 1px solid var(--slate-200); box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
-      padding: 24px; animation: uiPop 0.18s ease-out;
-    }
-    .ui-dialog-icon {
-      width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
-      font-size: 22px; margin-bottom: 14px; background: var(--primary-light);
-    }
-    .ui-dialog.danger .ui-dialog-icon { background: #FFE4E6; }
-    .ui-dialog-title { font-size: 17px; font-weight: 800; color: var(--slate-900); margin-bottom: 6px; }
-    .ui-dialog-message { font-size: 14px; color: var(--slate-600); line-height: 1.55; white-space: pre-line; }
-    .ui-dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; flex-wrap: wrap; }
-    .ui-dialog.danger .btn-primary { background: linear-gradient(135deg, #E11D48 0%, #BE123C 100%); box-shadow: 0 4px 12px rgba(225, 29, 72, 0.3); }
-    @keyframes uiFade { from { opacity: 0; } to { opacity: 1; } }
-    @keyframes uiPop { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
-    @media (max-width: 640px) {
-      .ui-dialog-backdrop { align-items: flex-end; padding: 0; }
-      .ui-dialog { max-width: none; border-radius: 16px 16px 0 0; padding: 20px 18px calc(18px + env(safe-area-inset-bottom)); }
-      .ui-dialog-actions .btn { flex: 1; }
+      .dash-value { font-size: 26px; }
+      .month-chart { gap: 6px; height: 118px; }
     }
   </style>
 </head>
@@ -89,20 +75,9 @@
         <div class="dash-value" id="dashTotal">0</div>
         <div class="dash-sub" id="dashMonth">0 este mes</div>
       </div>
-      <div class="dash-card">
-        <div class="dash-label">✅ Plan elegido</div>
-        <div class="dash-value" id="dashChosen" style="color: var(--emerald-700);">0</div>
-        <div class="dash-sub" id="dashRate">0% de respuesta</div>
-      </div>
-      <div class="dash-card">
-        <div class="dash-label">⏳ Pendientes</div>
-        <div class="dash-value" id="dashPending" style="color: #B45309;">0</div>
-        <div class="dash-sub">sin elegir plan</div>
-      </div>
-      <div class="dash-card">
-        <div class="dash-label">💰 Valor elegido</div>
-        <div class="dash-value dash-money" id="dashValue">$ 0</div>
-        <div class="dash-sub">neto de planes elegidos</div>
+      <div class="dash-card dash-chart-card">
+        <div class="dash-label">Cotizaciones por mes <span style="font-weight: 500; color: var(--slate-400);">· últimos 6 meses</span></div>
+        <div class="month-chart" id="monthChart" role="img" aria-label="Cotizaciones creadas por mes"></div>
       </div>
     </div>
 
@@ -122,7 +97,6 @@
               <th>N° Cotización</th>
               <th>Cliente</th>
               <th>Proyecto</th>
-              <th>Estado</th>
               <th style="text-align: right;">Acciones</th>
             </tr>
           </thead>
@@ -775,18 +749,38 @@
     }
 
     function renderDashboard() {
-      const total = quotesList.length;
       const now = new Date();
-      const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-      const thisMonth = quotesList.filter(x => String(x.created_at || '').startsWith(monthKey)).length;
-      const chosen = quotesList.filter(x => x.client_selected_at);
-      const value = chosen.reduce((sum, x) => sum + (parseFloat(x.neto) || 0), 0);
-      document.getElementById('dashTotal').textContent = total;
-      document.getElementById('dashMonth').textContent = `${thisMonth} este mes`;
-      document.getElementById('dashChosen').textContent = chosen.length;
-      document.getElementById('dashRate').textContent = `${total ? Math.round(chosen.length * 100 / total) : 0}% de respuesta`;
-      document.getElementById('dashPending').textContent = total - chosen.length;
-      document.getElementById('dashValue').textContent = formatCOP(value);
+      const keyOf = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const counts = {};
+      quotesList.forEach(x => {
+        const k = String(x.created_at || '').slice(0, 7);
+        if (k) counts[k] = (counts[k] || 0) + 1;
+      });
+
+      document.getElementById('dashTotal').textContent = quotesList.length;
+      document.getElementById('dashMonth').textContent = `${counts[keyOf(now)] || 0} este mes`;
+
+      // Últimos 6 meses, del más antiguo al actual
+      const months = [];
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        months.push({ key: keyOf(d), date: d, count: counts[keyOf(d)] || 0 });
+      }
+      const max = Math.max(1, ...months.map(m => m.count));
+      const chart = document.getElementById('monthChart');
+      chart.innerHTML = months.map((m, i) => {
+        const short = m.date.toLocaleDateString('es-CO', { month: 'short' }).replace('.', '');
+        const long = m.date.toLocaleDateString('es-CO', { month: 'long', year: 'numeric' });
+        const pct = Math.round(m.count / max * 100);
+        const current = i === months.length - 1;
+        const label = `${m.count} ${m.count === 1 ? 'cotización' : 'cotizaciones'}`;
+        return `<div class="month-col" tabindex="0" aria-label="${long}: ${label}">
+          <div class="month-tip">${long}: <strong>${label}</strong></div>
+          <div class="month-count">${m.count || ''}</div>
+          <div class="month-track"><div class="month-bar ${current ? 'is-current' : ''}" style="height: ${pct}%"></div></div>
+          <div class="month-name">${short}</div>
+        </div>`;
+      }).join('');
     }
 
     function renderQuotesList() {
@@ -797,7 +791,7 @@
       document.getElementById('quotesCount').textContent = `(${quotesList.length})`;
       renderDashboard();
       if (!rows.length) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--slate-500);">${quotesList.length ? 'Sin resultados' : 'Aún no hay cotizaciones'}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--slate-500);">${quotesList.length ? 'Sin resultados' : 'Aún no hay cotizaciones'}</td></tr>`;
         return;
       }
       tbody.innerHTML = rows.map(x => {
@@ -807,9 +801,6 @@
           <td><strong style="color: var(--primary);">${escapeHtml(x.id)}</strong><br><span style="font-size: 12px; color: var(--slate-500);">${escapeHtml(x.quote_date)}</span></td>
           <td><strong>${escapeHtml(x.client_name || '—')}</strong><br><span style="font-size: 12px; color: var(--slate-500);">${escapeHtml(x.client_company)}</span></td>
           <td>${escapeHtml(x.project_title)}</td>
-          <td>${x.client_selected_at
-            ? `<span class="status-pill status-ok">✔ Plan elegido</span><br><span style="font-size: 12px; color: var(--slate-500);">${escapeHtml(x.selected_plan)}</span>`
-            : '<span class="status-pill status-wait">⏳ Pendiente</span>'}</td>
           <td style="text-align: right;">
             <div style="display: inline-flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end;">
               <button type="button" class="btn btn-secondary btn-sm" onclick="openQuotation(decodeURIComponent('${id}'))">✏️ Editar</button>
