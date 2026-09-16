@@ -109,7 +109,6 @@ async def friendly_http_error(request: Request, exc: StarletteHTTPException):
         return JSONResponse({"detail": exc.detail}, status_code=exc.status_code, headers=getattr(exc, "headers", None))
 
     path = request.url.path
-    is_admin = is_admin_authenticated(request)
     if exc.status_code == 404 and path.startswith("/c/"):
         ctx = {
             "icon": "🔗",
@@ -141,7 +140,7 @@ async def friendly_http_error(request: Request, exc: StarletteHTTPException):
             "message": "No pudimos completar tu solicitud. Intenta de nuevo en unos minutos.",
             "tips": [],
         }
-    ctx.update({"status_code": exc.status_code, "show_admin_link": is_admin})
+    ctx["status_code"] = exc.status_code
     response = templates.TemplateResponse(request, "error.html", ctx, status_code=exc.status_code)
     response.headers.update({"X-Robots-Tag": "noindex, nofollow", "Cache-Control": "no-store"})
     return response
