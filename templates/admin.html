@@ -7,6 +7,35 @@
   <link rel="stylesheet" href="/static/css/style.css?v=5">
   <style>
     @media (max-width: 640px) { .hide-xs { display: none; } }
+
+    /* Diálogos propios (reemplazan confirm/alert del navegador) */
+    .ui-dialog-backdrop {
+      position: fixed; inset: 0; z-index: 2000;
+      background: rgba(11, 15, 25, 0.55); backdrop-filter: blur(3px);
+      display: flex; align-items: center; justify-content: center; padding: 16px;
+      animation: uiFade 0.15s ease-out;
+    }
+    .ui-dialog {
+      width: 100%; max-width: 420px; background: #FFFFFF; border-radius: 16px;
+      border: 1px solid var(--slate-200); box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+      padding: 24px; animation: uiPop 0.18s ease-out;
+    }
+    .ui-dialog-icon {
+      width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+      font-size: 22px; margin-bottom: 14px; background: var(--primary-light);
+    }
+    .ui-dialog.danger .ui-dialog-icon { background: #FFE4E6; }
+    .ui-dialog-title { font-size: 17px; font-weight: 800; color: var(--slate-900); margin-bottom: 6px; }
+    .ui-dialog-message { font-size: 14px; color: var(--slate-600); line-height: 1.55; white-space: pre-line; }
+    .ui-dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; flex-wrap: wrap; }
+    .ui-dialog.danger .btn-primary { background: linear-gradient(135deg, #E11D48 0%, #BE123C 100%); box-shadow: 0 4px 12px rgba(225, 29, 72, 0.3); }
+    @keyframes uiFade { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes uiPop { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
+    @media (max-width: 640px) {
+      .ui-dialog-backdrop { align-items: flex-end; padding: 0; }
+      .ui-dialog { max-width: none; border-radius: 16px 16px 0 0; padding: 20px 18px calc(18px + env(safe-area-inset-bottom)); }
+      .ui-dialog-actions .btn { flex: 1; }
+    }
   </style>
 </head>
 <body>
@@ -489,7 +518,7 @@
 
     function removePlan(idx) {
       const plans = readPlansFromForm();
-      if (plans.length <= 1) { alert('La propuesta debe tener al menos 1 plan.'); return; }
+      if (plans.length <= 1) { uiAlert('No se puede quitar', 'La propuesta debe tener al menos 1 plan.', { icon: '⚠️' }); return; }
       plans.splice(idx, 1);
       renderPlans(plans);
     }
@@ -632,7 +661,7 @@
         });
 
         if (resp.status === 401) {
-          alert('⚠️ Tu sesión de administrador expiró. Vuelve a iniciar sesión; los cambios sin guardar se perderán.');
+          await uiAlert('Tu sesión expiró', 'Vuelve a iniciar sesión. Los cambios sin guardar se perderán.', { icon: '🔒' });
           window.location.href = '/login?next=' + encodeURIComponent(location.pathname + location.search);
           return;
         }
@@ -648,6 +677,7 @@
           setEditing(res.quote_id);
           document.getElementById('quote_number').value = res.quote_id;
           showShareBanner(res.quote_id);
+          markClean();
           await refreshQuotesList();
           showToast('✔ Cotización ' + res.quote_id + ' guardada correctamente');
         } else {
@@ -670,7 +700,7 @@
         const data = await resp.json();
         populateForm(data);
       } catch (e) {
-        alert('Error al cargar preset');
+        showToast('⚠️ Error al cargar la plantilla', 'error');
       }
     }
 
@@ -754,8 +784,89 @@
       renderQuotesList();
     }
 
-    function confirmDiscard() {
-      return confirm('¿Continuar? Los cambios que no hayas guardado en la cotización abierta se perderán.');
+    // ==========================================
+    // DIÁLOGOS CON EL DISEÑO DEL PANEL
+    // ==========================================
+    function uiDialog({ title, message = '', icon = 'ℹ️', confirmText = 'Aceptar', cancelText = null, danger = false }) {
+      return new Promise(resolve => {
+        const backdrop = document.createElement('div');
+        backdrop.className = 'ui-dialog-backdrop';
+        backdrop.innerHTML = `
+          <div class="ui-dialog ${danger ? 'danger' : ''}" role="dialog" aria-modal="true">
+            <div class="ui-dialog-icon"></div>
+            <div class="ui-dialog-title"></div>
+            <div class="ui-dialog-message"></div>
+            <div class="ui-dialog-actions">
+              ${cancelText ? '<button type="button" class="btn btn-secondary" data-r="0"></button>' : ''}
+              <button type="button" class="btn btn-primary" data-r="1"></button>
+            </div>
+          </div>`;
+        backdrop.querySelector('.ui-dialog-icon').textContent = icon;
+        backdrop.querySelector('.ui-dialog-title').textContent = title;
+        backdrop.querySelector('.ui-dialog-message').textContent = message;
+        backdrop.querySelector('[data-r="1"]').textContent = confirmText;
+        if (cancelText) backdrop.querySelector('[data-r="0"]').textContent = cancelText;
+
+        const close = (result) => {
+          document.removeEventListener('keydown', onKey);
+          backdrop.remove();
+          resolve(result);
+        };
+        const onKey = (e) => {
+          if (e.key === 'Escape') close(false);
+          if (e.key === 'Enter') close(true);
+        };
+        backdrop.addEventListener('click', (e) => {
+          if (e.target === backdrop) close(false);
+          const btn = e.target.closest('[data-r]');
+          if (btn) close(btn.dataset.r === '1');
+        });
+        document.addEventListener('keydown', onKey);
+        document.body.appendChild(backdrop);
+        backdrop.querySelector(cancelText ? '[data-r="0"]' : '[data-r="1"]').focus();
+      });
+    }
+
+    function uiConfirm(title, message, options = {}) {
+      return uiDialog({ title, message, icon: '❓', confirmText: 'Continuar', cancelText: 'Cancelar', ...options });
+    }
+
+    function uiAlert(title, message, options = {}) {
+      return uiDialog({ title, message, confirmText: 'Entendido', ...options });
+    }
+
+    // ==========================================
+    // CAMBIOS SIN GUARDAR
+    // ==========================================
+    let savedSnapshot = null;
+
+    function formSnapshot() {
+      const data = collectData();
+      delete data.original_id;
+      return JSON.stringify(data);
+    }
+
+    function markClean() {
+      savedSnapshot = formSnapshot();
+    }
+
+    function markDirty() {
+      savedSnapshot = null;
+    }
+
+    function hasUnsavedChanges() {
+      if (!isEditorOpen()) return false;
+      return savedSnapshot === null || formSnapshot() !== savedSnapshot;
+    }
+
+    // Solo pregunta si realmente hay cambios sin guardar
+    async function confirmDiscard() {
+      if (!hasUnsavedChanges()) return true;
+      return uiConfirm(
+        'Tienes cambios sin guardar',
+        'Si continúas, los cambios de esta cotización se perderán.',
+        { icon: '⚠️', confirmText: 'Descartar cambios', cancelText: 'Seguir editando', danger: true }
+      );
     }
 
     function isEditorOpen() {
@@ -771,7 +882,7 @@
     }
 
     async function showListView() {
-      if (!confirmDiscard()) return;
+      if (!(await confirmDiscard())) return;
       document.getElementById('editorView').hidden = true;
       document.getElementById('listView').hidden = false;
       document.querySelectorAll('.editor-only').forEach(el => el.hidden = true);
@@ -787,24 +898,26 @@
     async function openQuotation(id) {
       // Si ya está abierta, solo llevar al formulario
       if (isEditorOpen() && editingId && editingId.toUpperCase() === id.toUpperCase()) { focusEditor(); return; }
-      if (isEditorOpen() && !confirmDiscard()) return;
+      if (!(await confirmDiscard())) return;
       const resp = await fetch('/api/cotizaciones/' + encodeURIComponent(id));
-      if (!resp.ok) { alert('No se encontró la cotización ' + id); return refreshQuotesList(); }
+      if (!resp.ok) { uiAlert('Cotización no encontrada', 'No se encontró la cotización ' + id + '.', { icon: '⚠️' }); return refreshQuotesList(); }
       const data = await resp.json();
       currentProposal = data;
       populateForm(data);
+      markClean();
       setEditing(data.quote_number);
       showShareBanner(data.quote_number);
       focusEditor();
     }
 
     async function newQuotation() {
-      if (isEditorOpen() && !confirmDiscard()) return;
+      if (!(await confirmDiscard())) return;
       const resp = await fetch('/api/cotizaciones/nueva');
       if (resp.status === 401) { window.location.href = '/login?next=/'; return; }
       const data = await resp.json();
       currentProposal = data;
       populateForm(data);
+      markClean();
       setEditing('');
       showEditorView('tabMeta');
       setTimeout(() => document.getElementById('client_name').focus(), 400);
@@ -823,16 +936,21 @@
       currentProposal = data;
       populateForm(data);
       setEditing('');
-      document.getElementById('editingLabel').textContent = '📄 Copia de ' + (tpl.quote_number ? 'cotización' : '') + ' (sin guardar)';
-      alert('Se creó una copia con el número ' + tpl.quote_number + '. Ajusta los datos del cliente y presiona Guardar.');
+      markDirty();
+      document.getElementById('editingLabel').textContent = '📄 Copia sin guardar';
       switchTab('tabMeta');
+      showToast('📄 Copia creada con el número ' + tpl.quote_number + '. Ajusta los datos y presiona Guardar.');
     }
 
     async function deleteQuotation(id) {
-      if (!confirm(`¿Eliminar la cotización ${id}?\n\nEl enlace del cliente dejará de funcionar. Esta acción no se puede deshacer.`)) return;
+      const ok = await uiConfirm(`¿Eliminar la cotización ${id}?`,
+        'El enlace del cliente dejará de funcionar. Esta acción no se puede deshacer.',
+        { icon: '🗑️', confirmText: 'Eliminar', danger: true });
+      if (!ok) return;
       const resp = await fetch('/api/cotizaciones/' + encodeURIComponent(id), { method: 'DELETE' });
       if (resp.status === 401) { window.location.href = '/login?next=/'; return; }
-      if (!resp.ok) { alert('No se pudo eliminar la cotización.'); }
+      if (!resp.ok) { showToast('⚠️ No se pudo eliminar la cotización.', 'error'); }
+      else { showToast('🗑️ Cotización ' + id + ' eliminada'); }
       if (editingId && editingId.toUpperCase() === id.toUpperCase()) editingId = '';
       document.getElementById('editorView').hidden = true;
       document.getElementById('listView').hidden = false;
@@ -845,7 +963,7 @@
       const resp = await fetch('/api/cotizaciones/' + encodeURIComponent(id));
       if (!resp.ok) return;
       const data = await resp.json();
-      currentProposal = data; populateForm(data); setEditing(data.quote_number); showShareBanner(data.quote_number);
+      currentProposal = data; populateForm(data); markClean(); setEditing(data.quote_number); showShareBanner(data.quote_number);
     }
 
     // Enlace seguro del cliente: /c/<código secreto>
@@ -875,7 +993,10 @@
 
     async function regenerateLink() {
       if (!editingId) return;
-      if (!confirm('¿Generar un enlace nuevo?\n\nEl enlace que ya enviaste al cliente dejará de funcionar y tendrás que enviarle el nuevo.')) return;
+      const ok = await uiConfirm('¿Generar un enlace nuevo?',
+        'El enlace que ya enviaste al cliente dejará de funcionar y tendrás que enviarle el nuevo.',
+        { icon: '🔄', confirmText: 'Generar enlace nuevo', danger: true });
+      if (!ok) return;
       const resp = await fetch('/api/cotizaciones/' + encodeURIComponent(editingId) + '/regenerar-enlace', { method: 'POST' });
       if (resp.status === 401) { window.location.href = '/login?next=/'; return; }
       if (!resp.ok) { showToast('⚠️ No se pudo generar el enlace nuevo.', 'error'); return; }
@@ -888,10 +1009,14 @@
 
     function copyShareUrl() {
       const url = document.getElementById('shareUrlText').textContent;
-      navigator.clipboard.writeText(url).then(() => {
-        alert('Enlace copiado al portapapeles:\n' + url);
-      });
+      navigator.clipboard.writeText(url)
+        .then(() => showToast('📋 Enlace copiado al portapapeles'))
+        .catch(() => uiAlert('Copia el enlace manualmente', url, { icon: '📋' }));
     }
+
+    window.addEventListener('beforeunload', (e) => {
+      if (hasUnsavedChanges()) { e.preventDefault(); e.returnValue = ''; }
+    });
 
     // Inicialización al cargar la página
     document.addEventListener('DOMContentLoaded', () => {
@@ -904,6 +1029,7 @@
         setEditing(currentProposal.quote_number);
         showShareBanner(currentProposal.quote_number);
         showEditorView('tabScope');
+        markClean();
       } else {
         document.querySelectorAll('.editor-only').forEach(el => el.hidden = true);
         history.replaceState(null, '', '/');
