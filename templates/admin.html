@@ -411,6 +411,13 @@
               <label class="form-label">Contacto (Email, Teléfono, Ciudad)</label>
               <input type="text" id="company_contact" class="form-control">
             </div>
+            <div class="form-group">
+              <label class="form-label">WhatsApp comercial (para el botón del cliente)</label>
+              <input type="text" id="company_whatsapp" class="form-control" placeholder="+57 300 123 4567">
+              <small style="font-size: 12px; color: var(--slate-500);">
+                El cliente confirma su plan o pide cambios y se abre un chat de WhatsApp a este número. Déjalo vacío para solo registrar la solicitud.
+              </small>
+            </div>
           </div>
 
           <div class="card">
@@ -442,6 +449,20 @@
             </div>
           </div>
         </div>
+
+        <!-- SOLICITUDES ENVIADAS POR EL CLIENTE DESDE SU ENLACE -->
+        <div class="card" style="margin-top: 18px;">
+          <div class="section-header" style="justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span class="section-num">💬</span>
+              <h2 class="section-title">Solicitudes del Cliente</h2>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="marcarSolicitudesAtendidas()">
+              ✔ Marcar como atendidas
+            </button>
+          </div>
+          <div id="clientRequestsBox"></div>
+        </div>
       </div>
 
       <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
@@ -470,7 +491,9 @@
       document.getElementById('company_name').value = data.company_name || '';
       document.getElementById('company_lead').value = data.company_lead || '';
       document.getElementById('company_contact').value = data.company_contact || '';
-      
+      document.getElementById('company_whatsapp').value = data.company_whatsapp || '';
+      renderClientRequests(data.client_requests || []);
+
       document.getElementById('quote_number').value = data.quote_number || '';
       document.getElementById('quote_validity').value = data.quote_validity || '';
       
@@ -727,7 +750,8 @@
         company_name: document.getElementById('company_name').value,
         company_lead: document.getElementById('company_lead').value,
         company_contact: document.getElementById('company_contact').value,
-        
+        company_whatsapp: document.getElementById('company_whatsapp').value.trim(),
+
         original_id: editingId,
         quote_number: document.getElementById('quote_number').value.trim(),
         quote_date: currentProposal.quote_date || new Date().toLocaleDateString('es-CO'),
@@ -939,7 +963,7 @@
         return `<tr>
           <td><strong style="color: var(--primary);">${escapeHtml(x.id)}</strong><br><span style="font-size: 12px; color: var(--slate-500);">${escapeHtml(x.quote_date)}</span></td>
           <td><strong>${escapeHtml(x.client_name || '—')}</strong><br><span style="font-size: 12px; color: var(--slate-500);">${escapeHtml(x.client_company)}</span></td>
-          <td>${escapeHtml(x.project_title)}</td>
+          <td>${escapeHtml(x.project_title)}${x.pending_requests ? `<br><span style="font-size: 12px; font-weight: 700; color: #B45309;">💬 ${x.pending_requests} ${x.pending_requests === 1 ? 'solicitud pendiente' : 'solicitudes pendientes'}</span>` : ''}</td>
           <td style="text-align: right;">
             <div style="display: inline-flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end;">
               <button type="button" class="btn btn-secondary btn-sm" onclick="openQuotation(decodeURIComponent('${id}'))">✏️ Editar</button>
@@ -1189,6 +1213,69 @@
       await refreshQuotesList();
       showShareBanner(editingId);
       showToast('✔ Enlace nuevo generado. El anterior ya no funciona.');
+    }
+
+    // ==========================================
+    // SOLICITUDES DEL CLIENTE (ELECCIÓN DE PLAN / CAMBIOS)
+    // ==========================================
+    function renderClientRequests(requests) {
+      const box = document.getElementById('clientRequestsBox');
+      if (!box) return;
+      box.innerHTML = '';
+      if (!requests.length) {
+        const empty = document.createElement('p');
+        empty.style.cssText = 'font-size: 13.5px; color: var(--slate-500);';
+        empty.textContent = 'Todavía no hay solicitudes. Aquí verás cuándo el cliente confirma un plan o pide modificaciones desde su enlace.';
+        box.appendChild(empty);
+        return;
+      }
+      [...requests].reverse().forEach(req => {
+        const esCambio = req.kind === 'modificacion';
+        const item = document.createElement('div');
+        item.style.cssText = 'border: 1px solid var(--slate-200); border-left: 4px solid ' +
+          (esCambio ? '#F59E0B' : 'var(--emerald-600)') +
+          '; border-radius: 8px; padding: 12px 14px; margin-bottom: 10px;' +
+          (req.attended ? ' opacity: 0.6;' : '');
+
+        const head = document.createElement('div');
+        head.style.cssText = 'display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 13px; font-weight: 700; color: var(--slate-900);';
+        head.append(
+          Object.assign(document.createElement('span'), {
+            textContent: (esCambio ? '📝 Solicitud de modificaciones' : '✅ Plan confirmado') +
+              (req.attended ? ' · atendida' : '')
+          }),
+          Object.assign(document.createElement('span'), {
+            textContent: (req.created_at || '').replace('T', ' '),
+            style: 'font-weight: 500; color: var(--slate-500);'
+          })
+        );
+        item.appendChild(head);
+
+        if (req.plan_label) {
+          const plan = document.createElement('div');
+          plan.style.cssText = 'font-size: 12.5px; color: var(--slate-600); margin-top: 4px;';
+          plan.textContent = 'Plan: ' + req.plan_label;
+          item.appendChild(plan);
+        }
+        if (req.message) {
+          const msg = document.createElement('div');
+          msg.style.cssText = 'font-size: 13.5px; color: var(--slate-800); margin-top: 8px; white-space: pre-wrap;';
+          msg.textContent = req.message;
+          item.appendChild(msg);
+        }
+        box.appendChild(item);
+      });
+    }
+
+    async function marcarSolicitudesAtendidas() {
+      if (!editingId) { showToast('⚠️ Abre una cotización guardada primero.', 'error'); return; }
+      const resp = await fetch('/api/cotizaciones/' + encodeURIComponent(editingId) + '/solicitudes/atendidas', { method: 'POST' });
+      if (resp.status === 401) { window.location.href = '/login?next=/'; return; }
+      if (!resp.ok) { showToast('⚠️ No se pudieron marcar las solicitudes.', 'error'); return; }
+      (currentProposal.client_requests || []).forEach(r => { r.attended = true; });
+      renderClientRequests(currentProposal.client_requests || []);
+      await refreshQuotesList();
+      showToast('✔ Solicitudes marcadas como atendidas.');
     }
 
     function copyShareUrl() {

@@ -27,6 +27,7 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 templates.env.filters["plan_items"] = storage.plan_items
 templates.env.globals["extra_services_flags"] = storage.extra_services_flags
+templates.env.globals["quote_whatsapp"] = storage.quote_whatsapp
 
 # ==========================================
 # CONFIGURACIÓN DE SEGURIDAD & AUTENTICACIÓN
@@ -386,6 +387,9 @@ async def save_quote(request: Request, payload: dict):
     else:
         payload.pop("client_selected_at", None)
     payload.pop("access_token", None)
+    # Las solicitudes del cliente se conservan: el panel no las envía
+    if existing.get("client_requests"):
+        payload["client_requests"] = existing["client_requests"]
 
     if is_rename and storage.quotation_exists(original_id):
         quote_id = storage.rename_quotation(original_id, payload)
@@ -421,6 +425,65 @@ async def select_plan(token: str, payload: dict):
     if storage.set_selected_plan(data["quote_number"], plan_index):
         return {"status": "ok", "selected_plan_index": plan_index}
     return {"status": "error", "message": "Índice de plan inválido"}
+
+
+def _whatsapp_url(data: dict, plan_index, kind: str, message: str) -> str:
+    """Enlace wa.me con un mensaje ya redactado para el asesor comercial."""
+    number = storage.quote_whatsapp(data)
+    if not number:
+        return ""
+    plans = data.get("plans") or []
+    plan = plans[plan_index] if isinstance(plan_index, int) and 0 <= plan_index < len(plans) else None
+    quien = data.get("client_name") or "un cliente"
+    lineas = [
+        f"Hola, soy {quien}."
+    ]
+    if kind == "modificacion":
+        lineas.append(f"Quiero solicitar cambios en la cotización {data.get('quote_number', '')}"
+                      f" ({data.get('project_title', '')}).")
+    else:
+        lineas.append(f"Quiero avanzar con la cotización {data.get('quote_number', '')}"
+                      f" ({data.get('project_title', '')}).")
+    if plan:
+        precio = f"{float(plan.get('price', 0) or 0):,.0f}".replace(",", ".")
+        etiqueta = "Plan de referencia" if kind == "modificacion" else "Plan elegido"
+        lineas.append(f"{etiqueta}: {plan.get('num', '')} — {plan.get('name', '')} ($ {precio} COP).")
+    if message:
+        lineas.append(f"Detalle: {message}")
+    return f"https://wa.me/{number}?text={quote(chr(10).join(lineas))}"
+
+
+@app.post("/c/{token}/solicitud")
+async def client_request(token: str, payload: dict):
+    """El cliente confirma un plan o pide modificaciones; se registra y se arma el enlace de WhatsApp."""
+    data = _quote_by_token_or_404(token)
+    kind = "modificacion" if payload.get("kind") == "modificacion" else "aceptacion"
+    try:
+        plan_index = int(payload.get("plan_index"))
+    except (TypeError, ValueError):
+        plan_index = None
+    plans = data.get("plans") or []
+    if plan_index is None or not 0 <= plan_index < len(plans):
+        plan_index = None
+    message = str(payload.get("message") or "").strip()[:2000]
+    if kind == "modificacion" and not message:
+        raise HTTPException(status_code=400, detail="Describe los cambios que necesitas en la cotización.")
+
+    if kind == "aceptacion" and plan_index is not None:
+        storage.set_selected_plan(data["quote_number"], plan_index)
+        data["selected_plan_index"] = plan_index
+    storage.add_client_request(data["quote_number"], kind, plan_index, message)
+    return {"status": "ok", "whatsapp_url": _whatsapp_url(data, plan_index, kind, message)}
+
+
+@app.post("/api/cotizaciones/{quote_id}/solicitudes/atendidas")
+async def mark_requests(request: Request, quote_id: str):
+    """Marca como atendidas las solicitudes del cliente (requiere admin)."""
+    if not is_admin_authenticated(request):
+        raise HTTPException(status_code=401, detail="No autorizado")
+    if not storage.mark_requests_attended(quote_id):
+        raise HTTPException(status_code=404, detail="Cotización no encontrada")
+    return {"status": "ok"}
 
 
 def _pdf_response(data: dict, plan_index):

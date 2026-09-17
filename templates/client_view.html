@@ -21,6 +21,68 @@
       #detailPlanPrice { font-size: 20px !important; }
       .plan-detail-card > div:first-child > div:last-child { text-align: left !important; }
     }
+    /* Cierre comercial: confirmar plan o pedir cambios */
+    .decision-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+    .decision-box {
+      border: 1px solid var(--slate-200);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+      background: var(--card-bg, #FFFFFF);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .decision-icon { font-size: 26px; line-height: 1; }
+    .decision-title { font-size: 16px; font-weight: 800; color: var(--slate-900); }
+    .decision-text { font-size: 13.5px; color: var(--slate-600); line-height: 1.5; flex: 1; }
+    .decision-hint { font-size: 12px; color: var(--slate-500); }
+    .decision-wa-btn { background: #25D366; color: #FFFFFF; border: 1px solid #1EBE5B; }
+    .decision-wa-btn:hover { background: #1EBE5B; color: #FFFFFF; }
+    .decision-wa-btn[disabled] { opacity: 0.55; cursor: not-allowed; }
+    .decision-feedback {
+      margin-top: 16px;
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 13.5px;
+      border: 1px solid var(--emerald-600);
+      color: var(--emerald-700);
+      background: rgba(16, 185, 129, 0.08);
+    }
+    .decision-feedback.is-error { border-color: #E11D48; color: #E11D48; background: rgba(225, 29, 72, 0.08); }
+
+    /* Modal de solicitud de cambios */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 120;
+      background: rgba(15, 23, 42, 0.55);
+      display: flex; align-items: center; justify-content: center;
+      padding: 16px;
+    }
+    .modal-overlay[hidden] { display: none; }
+    .modal-box {
+      background: var(--card-bg, #FFFFFF);
+      border: 1px solid var(--slate-200);
+      border-radius: var(--radius-sm);
+      padding: 22px;
+      width: 100%; max-width: 520px;
+      box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.45);
+    }
+    .modal-title { font-size: 18px; font-weight: 800; color: var(--slate-900); margin-bottom: 8px; }
+    .modal-text { font-size: 13.5px; color: var(--slate-600); margin-bottom: 14px; line-height: 1.5; }
+    .modal-label { display: block; font-size: 12px; font-weight: 700; color: var(--slate-700); margin-bottom: 6px; }
+    .modal-textarea {
+      width: 100%;
+      border: 1px solid var(--slate-300, var(--slate-200));
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      font: inherit; font-size: 13.5px;
+      color: var(--slate-900);
+      background: transparent;
+      resize: vertical;
+    }
+    .modal-textarea:focus { outline: 2px solid var(--primary); outline-offset: 1px; }
+    .modal-error { color: #E11D48; font-size: 12.5px; margin-top: 8px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+
     .plan-scope-list { list-style: none; padding: 0; margin: 0 0 12px; display: grid; gap: 6px; }
     .plan-scope-list li { position: relative; padding-left: 22px; line-height: 1.45; }
     .plan-scope-list li::before { content: "✔"; position: absolute; left: 0; top: 0; color: var(--emerald-600); font-weight: 800; }
@@ -445,6 +507,49 @@
       </div>
     </section>
 
+    <!-- CIERRE: CONFIRMAR PLAN POR WHATSAPP O PEDIR MODIFICACIONES -->
+    <section class="card" id="seccionDecision">
+      <div class="section-header">
+        <span class="section-num">✅</span>
+        <h2 class="section-title">¿Cómo quieres continuar?</h2>
+      </div>
+      <p style="font-size: 13.5px; color: var(--slate-500); margin-bottom: 18px;">
+        Confirma el plan que elegiste para hablar directamente con el equipo comercial, o cuéntanos qué cambios necesitas en la propuesta.
+      </p>
+
+      <div class="decision-grid">
+        <div class="decision-box">
+          <div class="decision-icon">💬</div>
+          <h3 class="decision-title">Confirmar plan y hablar por WhatsApp</h3>
+          <p class="decision-text">
+            Se abrirá WhatsApp con un mensaje listo que incluye tu cotización
+            <strong>{{ data.quote_number }}</strong> y el plan
+            <strong id="decisionPlanLabel">seleccionado</strong>.
+          </p>
+          <button type="button" class="btn btn-lg decision-wa-btn wa-label" id="btnConfirmWhatsapp" onclick="enviarDecision('aceptacion')" {% if not has_chosen %}disabled{% endif %}>
+            💬 Confirmar por WhatsApp
+          </button>
+          <div class="decision-hint pdf-before-choice" {% if has_chosen %}hidden{% endif %}>
+            Primero elige un plan en la sección 03 para confirmarlo.
+          </div>
+        </div>
+
+        <div class="decision-box">
+          <div class="decision-icon">📝</div>
+          <h3 class="decision-title">Solicitar modificaciones</h3>
+          <p class="decision-text">
+            ¿Necesitas ajustar alcance, plazos, módulos o valores? Describe los cambios y los recibiremos junto con tu cotización.
+          </p>
+          <button type="button" class="btn btn-secondary btn-lg" onclick="abrirModalCambios()">
+            📝 Pedir cambios en la cotización
+          </button>
+          <div class="decision-hint">Te responderemos por WhatsApp o por tu correo de contacto.</div>
+        </div>
+      </div>
+
+      <div id="decisionFeedback" class="decision-feedback" hidden></div>
+    </section>
+
   </main>
 
   <!-- BARRA FLOTANTE INFERIOR CON SELECCIÓN ACTIVA -->
@@ -464,6 +569,27 @@
         <a id="floatingPdfBtn" href="/c/{{ data.access_token }}/pdf?plan_index={{ sel_idx }}" target="_blank" class="btn btn-primary btn-sm pdf-after-choice" {% if not has_chosen %}hidden{% endif %}>
           📥 <span class="hide-xs">Descargar </span>PDF<span class="hide-xs"> con este Plan</span>
         </a>
+        <a href="#seccionDecision" class="btn btn-secondary btn-sm">📝 <span class="hide-xs">Pedir </span>cambios</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: SOLICITAR MODIFICACIONES -->
+  <div class="modal-overlay" id="modalCambios" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modalCambiosTitle">
+      <h3 class="modal-title" id="modalCambiosTitle">📝 Solicitar modificaciones</h3>
+      <p class="modal-text">
+        Cuéntanos con detalle qué quieres ajustar de la cotización {{ data.quote_number }}: alcance, módulos, plazos, forma de pago o valores.
+      </p>
+      <label class="modal-label" for="cambiosTexto">Cambios solicitados</label>
+      <textarea id="cambiosTexto" class="modal-textarea" rows="6" maxlength="2000"
+        placeholder="Ejemplo: Necesitamos incluir reportes exportables a Excel y mover el primer pago al 30%."></textarea>
+      <div class="modal-error" id="cambiosError" hidden>Describe los cambios que necesitas antes de enviar.</div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="cerrarModalCambios()">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btnEnviarCambios" onclick="enviarDecision('modificacion')">
+          Enviar solicitud
+        </button>
       </div>
     </div>
   </div>
@@ -471,12 +597,86 @@
   <!-- SCRIPT INTERACTIVO -->
   <script>
     const quoteData = {{ data | tojson }};
+    const hasWhatsapp = {{ 'true' if quote_whatsapp(data) else 'false' }};
     let currentSelectedIndex = {{ sel_idx }};
     let clientHasChosen = {{ 'true' if has_chosen else 'false' }};
 
     function updateChoiceState() {
       document.querySelectorAll('.pdf-after-choice').forEach(el => el.hidden = !clientHasChosen);
       document.querySelectorAll('.pdf-before-choice').forEach(el => el.hidden = clientHasChosen);
+      const waBtn = document.getElementById('btnConfirmWhatsapp');
+      if (waBtn) waBtn.disabled = !clientHasChosen;
+    }
+
+    // ----- Confirmar plan por WhatsApp / solicitar modificaciones -----
+    function mostrarFeedback(texto, esError) {
+      const box = document.getElementById('decisionFeedback');
+      box.textContent = texto;
+      box.classList.toggle('is-error', !!esError);
+      box.hidden = false;
+    }
+
+    function abrirModalCambios() {
+      document.getElementById('cambiosError').hidden = true;
+      document.getElementById('modalCambios').hidden = false;
+      document.getElementById('cambiosTexto').focus();
+    }
+
+    function cerrarModalCambios() {
+      document.getElementById('modalCambios').hidden = true;
+    }
+
+    async function enviarDecision(kind) {
+      const esCambio = kind === 'modificacion';
+      const textarea = document.getElementById('cambiosTexto');
+      const message = esCambio ? textarea.value.trim() : '';
+
+      if (esCambio && !message) {
+        document.getElementById('cambiosError').hidden = false;
+        textarea.focus();
+        return;
+      }
+      if (!esCambio && !clientHasChosen) {
+        mostrarFeedback('Primero elige un plan en la sección de opciones de inversión.', true);
+        return;
+      }
+
+      const btn = document.getElementById(esCambio ? 'btnEnviarCambios' : 'btnConfirmWhatsapp');
+      const textoOriginal = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Enviando...';
+
+      try {
+        const res = await fetch(`/c/${quoteData.access_token}/solicitud`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ kind, plan_index: currentSelectedIndex, message })
+        });
+        if (!res.ok) throw new Error('fallo');
+        const info = await res.json();
+
+        if (esCambio) {
+          cerrarModalCambios();
+          textarea.value = '';
+        }
+        if (info.whatsapp_url) {
+          window.open(info.whatsapp_url, '_blank', 'noopener');
+          mostrarFeedback(esCambio
+            ? 'Registramos tu solicitud de cambios y abrimos WhatsApp con el detalle. Si no se abrió, revisa el bloqueo de ventanas emergentes.'
+            : 'Registramos tu elección y abrimos WhatsApp para continuar. Si no se abrió, revisa el bloqueo de ventanas emergentes.', false);
+        } else {
+          mostrarFeedback(esCambio
+            ? 'Registramos tu solicitud de cambios. El equipo comercial te contactará por el medio que dejaste en la cotización.'
+            : 'Registramos tu elección. El equipo comercial te contactará para continuar.', false);
+        }
+        document.getElementById('decisionFeedback').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } catch (e) {
+        mostrarFeedback('No pudimos enviar tu solicitud. Verifica tu conexión e inténtalo de nuevo.', true);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = textoOriginal;
+        updateChoiceState();
+      }
     }
 
     function formatCOP(val) {
@@ -566,7 +766,9 @@
       document.getElementById('rowNetoVal').textContent = formatCOP(netoVal);
       labelStackTables();
 
-      // 4. Actualizar Barra Flotante
+      // 4. Actualizar Barra Flotante y el cierre comercial
+      const decisionLabel = document.getElementById('decisionPlanLabel');
+      if (decisionLabel) decisionLabel.textContent = plan.num + ' — ' + plan.name;
       document.getElementById('floatingPlanText').textContent = plan.num + ' (' + plan.name + ')';
       document.getElementById('floatingTotalText').textContent = formatCOP(retentions.length ? netoVal : totalVal);
 
@@ -622,6 +824,17 @@
     document.addEventListener('DOMContentLoaded', () => {
       labelStackTables();
       selectPlan(currentSelectedIndex, false);
+      // Sin número de WhatsApp configurado, la confirmación solo queda registrada
+      if (!hasWhatsapp) {
+        document.querySelectorAll('.wa-label').forEach(el => { el.textContent = '✅ Confirmar mi elección'; });
+      }
+      // Cerrar el modal con Escape o al hacer clic fuera de la tarjeta
+      document.getElementById('modalCambios').addEventListener('click', (ev) => {
+        if (ev.target.id === 'modalCambios') cerrarModalCambios();
+      });
+      document.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Escape') cerrarModalCambios();
+      });
     });
   </script>
 </body>

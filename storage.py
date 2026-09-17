@@ -31,6 +31,7 @@ DEFAULT_PROPOSAL = {
     "company_name": "BARCAM SOFTWARE LABS",
     "company_lead": "Desarrollo de Software & Soluciones Web / Móviles",
     "company_contact": "contacto@barcam.site | +57 300 123 4567 | Colombia",
+    "company_whatsapp": "+57 300 123 4567",
     "client_name": "Carlos Rodríguez",
     "client_company": "Inversiones & Finanzas S.A.S",
     "client_contact": "carlos.rodriguez@inversiones.com | +57 310 987 6543",
@@ -324,6 +325,72 @@ def set_selected_plan(quote_id: str, plan_index: int):
     return True
 
 
+DEFAULT_WHATSAPP = os.environ.get("WHATSAPP_NUMBER", "")
+DEFAULT_COUNTRY_CODE = os.environ.get("WHATSAPP_COUNTRY_CODE", "57")
+
+
+def whatsapp_digits(raw) -> str:
+    """Deja el numero listo para wa.me: solo digitos y con indicativo de pais.
+    Acepta '+57 300 123 4567', '300 123 4567', '57 300...'. Devuelve '' si no sirve."""
+    digits = "".join(ch for ch in str(raw or "") if ch.isdigit())
+    if not digits:
+        return ""
+    if len(digits) == 10 and DEFAULT_COUNTRY_CODE:
+        digits = DEFAULT_COUNTRY_CODE + digits
+    return digits if 8 <= len(digits) <= 15 else ""
+
+
+def quote_whatsapp(data: dict) -> str:
+    """Numero de WhatsApp del emisor para esta cotizacion (o el global por defecto)."""
+    return whatsapp_digits(data.get("company_whatsapp") or DEFAULT_WHATSAPP)
+
+
+def add_client_request(quote_id: str, kind: str, plan_index, message: str):
+    """Registra que el cliente acepto un plan o pidio cambios en la cotizacion."""
+    init_db()
+    entry = {
+        "kind": "modificacion" if kind == "modificacion" else "aceptacion",
+        "plan_index": plan_index if isinstance(plan_index, int) else None,
+        "message": str(message or "").strip()[:2000],
+        "created_at": _now(),
+        "attended": False,
+    }
+    with _lock, _connect() as conn:
+        row = conn.execute("SELECT data FROM quotations WHERE id = ?", (quote_id.strip(),)).fetchone()
+        if not row:
+            return None
+        data = json.loads(row["data"])
+        requests = data.get("client_requests")
+        if not isinstance(requests, list):
+            requests = []
+        plan = None
+        if isinstance(entry["plan_index"], int):
+            plans = data.get("plans") or []
+            if 0 <= entry["plan_index"] < len(plans):
+                plan = plans[entry["plan_index"]]
+        entry["plan_label"] = f'{plan.get("num", "")} — {plan.get("name", "")}'.strip(" —") if plan else ""
+        requests.append(entry)
+        data["client_requests"] = requests[-50:]
+        conn.execute("UPDATE quotations SET data = ?, updated_at = ? WHERE id = ?",
+                     (_clean_for_storage(data), _now(), quote_id.strip()))
+    return entry
+
+
+def mark_requests_attended(quote_id: str) -> bool:
+    """El administrador marca como atendidas todas las solicitudes del cliente."""
+    init_db()
+    with _lock, _connect() as conn:
+        row = conn.execute("SELECT data FROM quotations WHERE id = ?", (quote_id.strip(),)).fetchone()
+        if not row:
+            return False
+        data = json.loads(row["data"])
+        for req in data.get("client_requests") or []:
+            req["attended"] = True
+        conn.execute("UPDATE quotations SET data = ? WHERE id = ?",
+                     (_clean_for_storage(data), quote_id.strip()))
+    return True
+
+
 def extra_services_flags(data: dict) -> dict:
     """Qué servicios complementarios se muestran. Las cotizaciones antiguas los muestran todos."""
     section = data.get("show_extra_services", True) is not False
@@ -400,6 +467,7 @@ def list_quotations():
             "quote_date": q_data.get("quote_date", ""),
             "created_at": row["created_at"],
             "client_selected_at": q_data.get("client_selected_at"),
+            "pending_requests": sum(1 for r in (q_data.get("client_requests") or []) if not r.get("attended")),
             "selected_plan": (f'{_selected_plan(q_data).get("num", "")} — {_selected_plan(q_data).get("name", "")}'
                               if q_data.get("client_selected_at") else ""),
             "neto": compute_totals(q_data, float(_selected_plan(q_data).get("price", 0) or 0))["neto"],
