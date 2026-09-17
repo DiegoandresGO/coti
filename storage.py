@@ -14,16 +14,6 @@ DATABASE_FILE = os.environ.get(
     os.path.join(os.path.dirname(STORAGE_FILE), "cotizaciones.db")
 )
 
-# Filas por defecto de la tabla comparativa (una columna por plan)
-DEFAULT_COMPARISON_ROWS = [
-    {"label": "🌐 Aplicación Web Responsive & Backend", "values": ["✔ Incluida (MVP)", "✔ Incluida Completa", "✔ Incluida Escalable"]},
-    {"label": "📱 Aplicación Móvil Android (Archivo APK)", "values": ["✔ Compilada", "✔ Compilada & Optimizada", "✔ Compilada & Optimizada"]},
-    {"label": "🏢 Panel Administrativo y Auditoría", "values": ["Funciones esenciales", "✔ Panel Completo", "✔ Panel Completo + Reportes"]},
-    {"label": "⚡ Sincronización en la Nube y Base de Datos", "values": ["✔ Tiempo Real", "✔ Tiempo Real Seguro", "✔ Alta Disponibilidad"]},
-    {"label": "🛡️ Garantía Técnica Directa", "values": ["30 días calendario", "30 días calendario", "45 días calendario"]},
-    {"label": "🎓 Capacitación y Entrega de Manuales", "values": ["1 hora virtual", "2 horas virtuales", "3 horas virtuales"]},
-]
-
 DEFAULT_PROPOSAL = {
     "quote_number": "COT-2026-001",
     "quote_date": datetime.today().strftime("%d/%m/%Y"),
@@ -92,7 +82,6 @@ DEFAULT_PROPOSAL = {
         }
     ],
     "selected_plan_index": 1,
-    "comparison_rows": DEFAULT_COMPARISON_ROWS,
     "show_extra_services": True,
     "show_pentest": True,
     "show_hourly_dev": True,
@@ -212,9 +201,6 @@ def _row_to_data(row):
     # El número y el código de acceso vienen siempre del registro
     data["quote_number"] = row["id"]
     data["access_token"] = row["access_token"]
-    # Cotizaciones anteriores a la tabla editable usan las filas por defecto
-    if "comparison_rows" not in data:
-        data["comparison_rows"] = json.loads(json.dumps(DEFAULT_COMPARISON_ROWS))
     return data
 
 

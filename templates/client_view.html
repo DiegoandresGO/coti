@@ -288,61 +288,6 @@
         </div>
       </div>
 
-      <!-- TABLA COMPARATIVA DETALLADA DE PLANES -->
-      <div style="margin-top: 32px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
-          <h3 style="font-size: 16.5px; font-weight: 800; color: var(--slate-900);">
-            📊 Comparativa Detallada de Características por Opción
-          </h3>
-          <span style="font-size: 12px; color: var(--slate-500);">
-            Haz clic en los botones de columna para alternar entre opciones
-          </span>
-        </div>
-
-        <div class="table-responsive">
-          <table class="data-table compare-table" style="text-align: center;">
-            <thead>
-              <tr>
-                <th style="text-align: left; width: 34%;">Característica / Servicio</th>
-                {% for p in data.plans %}
-                <th style="width: 22%;" id="thPlanCol{{ loop.index0 }}">
-                  <div style="font-size: 11px; text-transform: uppercase; color: var(--slate-400);">{{ p.num }}</div>
-                  <div style="font-size: 14px; font-weight: 800; color: var(--slate-900); margin: 2px 0;">{{ p.name }}</div>
-                  <div style="font-size: 14.5px; font-weight: 800; color: var(--primary);">$ {{ "{:,.0f}".format(p.price|float).replace(",", ".") }} COP</div>
-                  <button type="button" class="btn btn-sm" id="btnTableSelect{{ loop.index0 }}" onclick="selectPlan({{ loop.index0 }})" style="margin-top: 8px; width: 100%; padding: 5px 8px; font-size: 11.5px;">
-                    Seleccionar
-                  </button>
-                </th>
-                {% endfor %}
-              </tr>
-            </thead>
-            <tbody>
-              {% for row in data.comparison_rows or [] %}
-              <tr>
-                <td style="text-align: left; font-weight: 600; color: var(--slate-800);">{{ row.label }}</td>
-                {% for p in data.plans %}
-                {% set val = ((row.get('values') or [])[loop.index0] if loop.index0 < (row.get('values') or [])|length else '')|string|trim %}
-                <td>
-                  {% if not val %}<span style="color: var(--slate-300);">—</span>
-                  {% elif val.startswith('✔') or val.startswith('✓') %}<span style="color: var(--emerald-600); font-weight: 800;">{{ val }}</span>
-                  {% elif val.startswith('✖') or val.startswith('✗') or val.startswith('❌') %}<span style="color: var(--slate-400);">{{ val }}</span>
-                  {% else %}{{ val }}{% endif %}
-                </td>
-                {% endfor %}
-              </tr>
-              {% endfor %}
-              <tr style="background: var(--primary-light);">
-                <td style="text-align: left; font-weight: 800; color: var(--primary);">⏱️ Horas de Soporte Técnico Incluidas (Sin Costo Mensual)</td>
-                {% for p in data.plans %}
-                <td>
-                  <strong style="color: var(--primary); font-size: 14px;">{{ p.support_hours }}</strong>
-                </td>
-                {% endfor %}
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
     </section>
 
     <!-- 04. SERVICIOS Y TARIFAS ADICIONALES (opcional) -->
@@ -780,26 +725,7 @@
       const pdfUrl = `/c/${quoteData.access_token}/pdf?plan_index=${index}`;
       document.getElementById('navPdfBtn').href = pdfUrl;
       document.getElementById('ctaPdfBtn').href = pdfUrl;
-      // 6. Actualizar Botones y Cabeceras de la Tabla Comparativa
-      plans.forEach((p, idx) => {
-        const thCol = document.getElementById('thPlanCol' + idx);
-        const tblBtn = document.getElementById('btnTableSelect' + idx);
-        if (thCol && tblBtn) {
-          if (idx === index && clientHasChosen) {
-            thCol.style.background = 'rgba(79, 70, 229, 0.08)';
-            thCol.style.border = '2px solid var(--primary)';
-            tblBtn.className = 'btn btn-primary btn-sm';
-            tblBtn.textContent = '✔ Seleccionado';
-          } else {
-            thCol.style.background = 'transparent';
-            thCol.style.border = '1px solid var(--slate-200)';
-            tblBtn.className = 'btn btn-secondary btn-sm';
-            tblBtn.textContent = 'Seleccionar';
-          }
-        }
-      });
-
-      // 7. Guardar la elección del cliente (solo cuando él hace clic)
+      // 6. Guardar la elección del cliente (solo cuando él hace clic)
       if (!fromUser) return;
       try {
         fetch(`/c/${quoteData.access_token}/select-plan`, {
