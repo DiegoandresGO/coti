@@ -7,7 +7,7 @@
   <script src="/static/js/theme.js"></script>
   <meta name="theme-color" content="#4F46E5">
   <title>Panel de Cotizaciones — Administración</title>
-  <link rel="stylesheet" href="/static/css/style.css?v=7">
+  <link rel="stylesheet" href="/static/css/style.css?v=8">
   <style>
     @media (max-width: 640px) { .hide-xs { display: none; } }
 
@@ -185,7 +185,7 @@
 
           <div class="form-group">
             <label class="form-label">Descripción del Desarrollo a Realizar</label>
-            <textarea id="project_description" class="form-control" rows="4"></textarea>
+            <textarea id="project_description" class="form-control" rows="5"></textarea>
           </div>
         </div>
 
@@ -445,6 +445,29 @@
   <script>
     let currentProposal = {{ initial_data | tojson }};
 
+    // ==========================================
+    // CAMPOS DE TEXTO QUE CRECEN AL ESCRIBIR
+    // ==========================================
+    // Los textos largos (descripciones, alcance, exclusiones) no deben quedar
+    // apretados: cada área de texto se estira hasta un máximo razonable.
+    const AUTOGROW_MAX = 520;
+
+    function autoGrow(el) {
+      if (!el || el.tagName !== 'TEXTAREA' || !el.offsetParent) return;
+      el.style.height = 'auto';
+      el.style.height = Math.min(el.scrollHeight + 2, AUTOGROW_MAX) + 'px';
+      el.style.overflowY = el.scrollHeight > AUTOGROW_MAX ? 'auto' : 'hidden';
+    }
+
+    function autoGrowAll(root) {
+      (root || document).querySelectorAll('textarea.form-control').forEach(autoGrow);
+    }
+
+    // Vale para las áreas creadas después (módulos, planes)
+    document.addEventListener('input', (e) => {
+      if (e.target.matches && e.target.matches('textarea.form-control')) autoGrow(e.target);
+    });
+
     function switchTab(tabId) {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
@@ -453,6 +476,8 @@
       if (targetBtn) targetBtn.classList.add('active');
       const targetContent = document.getElementById(tabId);
       if (targetContent) targetContent.classList.add('active');
+      // Una pestaña oculta no tiene medidas: se ajustan al mostrarla
+      autoGrowAll(targetContent);
     }
 
     function populateForm(data) {
@@ -505,6 +530,7 @@
 
       renderModules(data.modules || []);
       renderPlans(data.plans || []);
+      autoGrowAll();
     }
 
     function renderModules(modules) {
@@ -516,18 +542,19 @@
         div.style.padding = '14px 16px';
         div.style.background = 'var(--slate-50)';
         div.innerHTML = `
-          <div class="module-row" style="display: flex; gap: 12px; align-items: center;">
+          <div class="module-row" style="display: flex; gap: 12px; align-items: flex-start;">
             <div style="flex: 1;">
-              <input type="text" class="form-control mod-name" value="${mod.name}" placeholder="Nombre del Módulo" style="font-weight: 700;">
+              <input type="text" class="form-control mod-name" value="${escapeAttr(mod.name)}" placeholder="Nombre del Módulo" style="font-weight: 700;">
             </div>
             <div style="flex: 2;">
-              <input type="text" class="form-control mod-desc" value="${mod.desc}" placeholder="Descripción del Alcance">
+              <textarea class="form-control mod-desc" rows="2" placeholder="Descripción del Alcance">${escapeAttr(mod.desc)}</textarea>
             </div>
             <button type="button" class="btn btn-secondary btn-sm" onclick="this.closest('.card').remove()" style="color: var(--rose-700);">🗑️</button>
           </div>
         `;
         container.appendChild(div);
       });
+      autoGrowAll(container);
     }
 
     function addModule() {
@@ -537,17 +564,19 @@
       div.style.padding = '14px 16px';
       div.style.background = 'var(--slate-50)';
       div.innerHTML = `
-        <div class="module-row" style="display: flex; gap: 12px; align-items: center;">
+        <div class="module-row" style="display: flex; gap: 12px; align-items: flex-start;">
           <div style="flex: 1;">
             <input type="text" class="form-control mod-name" value="Nuevo Módulo" placeholder="Nombre del Módulo" style="font-weight: 700;">
           </div>
           <div style="flex: 2;">
-            <input type="text" class="form-control mod-desc" value="Descripción funcional del componente" placeholder="Descripción del Alcance">
+            <textarea class="form-control mod-desc" rows="2" placeholder="Descripción del Alcance">Descripción funcional del componente</textarea>
           </div>
           <button type="button" class="btn btn-secondary btn-sm" onclick="this.closest('.card').remove()" style="color: var(--rose-700);">🗑️</button>
         </div>
       `;
       container.appendChild(div);
+      autoGrowAll(div);
+      div.querySelector('.mod-name').focus();
     }
 
     function onTaxChange() {
@@ -644,6 +673,7 @@
         `;
         container.appendChild(div);
       });
+      autoGrowAll(container);
     }
 
     function collectData() {
@@ -1324,7 +1354,11 @@
         document.querySelectorAll('.editor-only').forEach(el => el.hidden = true);
         history.replaceState(null, '', '/');
       }
+      autoGrowAll();
     });
+
+    // Al cambiar el ancho de la ventana el texto se reacomoda
+    window.addEventListener('resize', () => autoGrowAll());
   </script>
 </body>
 </html>

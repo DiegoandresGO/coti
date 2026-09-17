@@ -569,8 +569,9 @@ body {
 
 .form-control {
   width: 100%;
-  padding: 10px 14px;
+  padding: 11px 14px;
   font-size: 14px;
+  line-height: 1.5;
   border: 1px solid var(--slate-300);
   border-radius: var(--radius-sm);
   background: #FFFFFF;
@@ -587,6 +588,11 @@ body {
 
 textarea.form-control {
   resize: vertical;
+  /* Más aire al escribir textos largos; el panel además las estira solas */
+  line-height: 1.6;
+  padding: 12px 14px;
+  min-height: 84px;
+  max-height: 520px;
 }
 
 .grid-2 {
