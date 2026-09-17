@@ -566,9 +566,9 @@
       </div>
       <div style="display: flex; gap: 10px; flex-wrap: nowrap;">
         <a href="#seccionPlanes" class="btn btn-primary btn-sm pdf-before-choice" {% if has_chosen %}hidden{% endif %}>👆 Ver planes</a>
-        <a id="floatingPdfBtn" href="/c/{{ data.access_token }}/pdf?plan_index={{ sel_idx }}" target="_blank" class="btn btn-primary btn-sm pdf-after-choice" {% if not has_chosen %}hidden{% endif %}>
-          📥 <span class="hide-xs">Descargar </span>PDF<span class="hide-xs"> con este Plan</span>
-        </a>
+        <button type="button" id="floatingConfirmBtn" class="btn btn-sm decision-wa-btn wa-label-sm pdf-after-choice" onclick="enviarDecision('aceptacion')" {% if not has_chosen %}hidden{% endif %}>
+          💬 Confirmar<span class="hide-xs"> por WhatsApp</span>
+        </button>
         <a href="#seccionDecision" class="btn btn-secondary btn-sm">📝 <span class="hide-xs">Pedir </span>cambios</a>
       </div>
     </div>
@@ -604,11 +604,17 @@
     function updateChoiceState() {
       document.querySelectorAll('.pdf-after-choice').forEach(el => el.hidden = !clientHasChosen);
       document.querySelectorAll('.pdf-before-choice').forEach(el => el.hidden = clientHasChosen);
-      const waBtn = document.getElementById('btnConfirmWhatsapp');
-      if (waBtn) waBtn.disabled = !clientHasChosen;
+      botonesConfirmar().forEach(b => { b.disabled = !clientHasChosen; });
     }
 
     // ----- Confirmar plan por WhatsApp / solicitar modificaciones -----
+    // El cliente puede confirmar desde la sección de cierre o desde la barra flotante
+    function botonesConfirmar() {
+      return ['btnConfirmWhatsapp', 'floatingConfirmBtn']
+        .map(id => document.getElementById(id))
+        .filter(Boolean);
+    }
+
     function mostrarFeedback(texto, esError) {
       const box = document.getElementById('decisionFeedback');
       box.textContent = texto;
@@ -641,10 +647,9 @@
         return;
       }
 
-      const btn = document.getElementById(esCambio ? 'btnEnviarCambios' : 'btnConfirmWhatsapp');
-      const textoOriginal = btn.textContent;
-      btn.disabled = true;
-      btn.textContent = 'Enviando...';
+      const botones = esCambio ? [document.getElementById('btnEnviarCambios')] : botonesConfirmar();
+      const textosOriginales = botones.map(b => b.innerHTML);
+      botones.forEach(b => { b.disabled = true; b.textContent = 'Enviando...'; });
 
       try {
         const res = await fetch(`/c/${quoteData.access_token}/solicitud`, {
@@ -673,8 +678,7 @@
       } catch (e) {
         mostrarFeedback('No pudimos enviar tu solicitud. Verifica tu conexión e inténtalo de nuevo.', true);
       } finally {
-        btn.disabled = false;
-        btn.textContent = textoOriginal;
+        botones.forEach((b, i) => { b.disabled = false; b.innerHTML = textosOriginales[i]; });
         updateChoiceState();
       }
     }
@@ -776,7 +780,6 @@
       const pdfUrl = `/c/${quoteData.access_token}/pdf?plan_index=${index}`;
       document.getElementById('navPdfBtn').href = pdfUrl;
       document.getElementById('ctaPdfBtn').href = pdfUrl;
-      document.getElementById('floatingPdfBtn').href = pdfUrl;
       // 6. Actualizar Botones y Cabeceras de la Tabla Comparativa
       plans.forEach((p, idx) => {
         const thCol = document.getElementById('thPlanCol' + idx);
@@ -827,6 +830,7 @@
       // Sin número de WhatsApp configurado, la confirmación solo queda registrada
       if (!hasWhatsapp) {
         document.querySelectorAll('.wa-label').forEach(el => { el.textContent = '✅ Confirmar mi elección'; });
+        document.querySelectorAll('.wa-label-sm').forEach(el => { el.textContent = '✅ Confirmar'; });
       }
       // Cerrar el modal con Escape o al hacer clic fuera de la tarjeta
       document.getElementById('modalCambios').addEventListener('click', (ev) => {
