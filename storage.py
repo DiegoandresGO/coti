@@ -178,7 +178,35 @@ def init_db():
                     except OSError:
                         pass
             _ensure_token_column(conn)
+            conn.execute("CREATE TABLE IF NOT EXISTS app_state (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
         _initialized = True
+
+
+def _app_state_set(conn, key: str, value: str):
+    conn.execute("INSERT INTO app_state (key, value) VALUES (?, ?) "
+                 "ON CONFLICT(key) DO UPDATE SET value = excluded.value", (key, value))
+
+
+def get_session_nonce() -> str:
+    """Valor que acompaña a la firma de la cookie del panel.
+    Al rotarlo, todas las cookies emitidas antes dejan de ser válidas."""
+    init_db()
+    with _lock, _connect() as conn:
+        row = conn.execute("SELECT value FROM app_state WHERE key = 'session_nonce'").fetchone()
+        if row and row["value"]:
+            return row["value"]
+        nonce = secrets.token_urlsafe(16)
+        _app_state_set(conn, "session_nonce", nonce)
+    return nonce
+
+
+def rotate_session_nonce() -> str:
+    """Invalida en el servidor todas las sesiones abiertas del panel."""
+    init_db()
+    nonce = secrets.token_urlsafe(16)
+    with _lock, _connect() as conn:
+        _app_state_set(conn, "session_nonce", nonce)
+    return nonce
 
 
 def new_access_token() -> str:

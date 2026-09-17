@@ -45,7 +45,10 @@ SESSION_TIMEOUT_SECONDS = SESSION_TIMEOUT_MINUTES * 60
 
 
 def _sign(payload: str) -> str:
-    return hmac.new(SECRET_KEY.encode(), payload.encode(), hashlib.sha256).hexdigest()
+    """La firma incluye un valor guardado en la base de datos que se rota al cerrar
+    sesión; así, las cookies anteriores dejan de validarse en el servidor."""
+    clave = f"{SECRET_KEY}:{storage.get_session_nonce()}".encode()
+    return hmac.new(clave, payload.encode(), hashlib.sha256).hexdigest()
 
 
 def create_session_token(username: str) -> str:
@@ -69,14 +72,51 @@ def verify_session_token(token: str) -> bool:
         return False
 
 
+def _cookie_secure() -> bool:
+    return os.environ.get("COOKIE_SECURE", "true").lower() != "false"
+
+
+# Las páginas del panel no se guardan en caché: si no se envían estas cabeceras,
+# el navegador (o un proxy) puede volver a mostrar el panel desde su caché
+# después de cerrar la sesión.
+NO_STORE_HEADERS = {
+    "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0, private",
+    "Pragma": "no-cache",
+    "Expires": "0",
+    "Vary": "Cookie",
+}
+
+
+def no_store(response):
+    response.headers.update(NO_STORE_HEADERS)
+    return response
+
+
 def set_session_cookie(response, username: str):
     response.set_cookie(
         key=COOKIE_NAME,
         value=create_session_token(username),
         max_age=SESSION_TIMEOUT_SECONDS,
+        path="/",
         httponly=True,
         samesite="lax",
-        secure=os.environ.get("COOKIE_SECURE", "true").lower() != "false",
+        secure=_cookie_secure(),
+    )
+
+
+def clear_session_cookie(response):
+    """Borra la cookie con la misma ruta con la que se creó; sin el atributo
+    Secure, para que el borrado también se aplique si el sitio se sirve por HTTP.
+    Se envía Max-Age=0 junto con una fecha de expiración en el pasado, para que
+    ningún navegador ni proxy pueda conservar la sesión anterior."""
+    response.set_cookie(
+        key=COOKIE_NAME,
+        value="",
+        max_age=0,
+        expires="Thu, 01 Jan 1970 00:00:00 GMT",
+        path="/",
+        httponly=True,
+        samesite="lax",
     )
 
 
@@ -193,9 +233,11 @@ async def logout(motivo: str = "", next: str = "/"):
     url = "/login"
     if motivo == "inactividad":
         url = f"/login?motivo=inactividad&next={quote(safe_next(next))}"
+    # El token se invalida también en el servidor, no solo en el navegador
+    storage.rotate_session_nonce()
     response = RedirectResponse(url=url, status_code=303)
-    response.delete_cookie(COOKIE_NAME)
-    return response
+    clear_session_cookie(response)
+    return no_store(response)
 
 
 @app.post("/api/session/ping")
@@ -208,9 +250,13 @@ async def session_ping(request: Request):
 
 @app.middleware("http")
 async def refresh_admin_session(request: Request, call_next):
-    """Cada petición del administrador renueva el contador de inactividad (sesión deslizante)."""
+    """Cada petición del administrador renueva el contador de inactividad (sesión deslizante).
+    Además evita que el panel, el login o la API queden en caché: así, al cerrar
+    la sesión, volver a la dirección no puede mostrar la página guardada."""
     response = await call_next(request)
     path = request.url.path
+    if not path.startswith(("/static", "/c/")):
+        no_store(response)
     if (path not in ("/logout", "/login") and not path.startswith(("/static", "/c/"))
             and response.status_code < 400 and is_admin_authenticated(request)
             and "set-cookie" not in response.headers):

@@ -1287,6 +1287,22 @@
       if (document.visibilityState === 'visible' && Date.now() - lastActivity >= SESSION_TIMEOUT_MS) logoutForInactivity();
     });
 
+    // Si el navegador restaura el panel desde su caché (botón atrás o volver a la
+    // dirección), se confirma con el servidor que la sesión siga abierta
+    async function verificarSesionAlRestaurar() {
+      if (loggingOut) return;
+      try {
+        const resp = await fetch('/api/session/ping', { method: 'POST', cache: 'no-store' });
+        if (resp.status === 401) {
+          loggingOut = true;
+          window.onbeforeunload = null;
+          window.location.replace('/login?next=/');
+        }
+      } catch (e) {}
+    }
+
+    window.addEventListener('pageshow', (e) => { if (e.persisted) verificarSesionAlRestaurar(); });
+
     window.addEventListener('beforeunload', (e) => {
       if (loggingOut) return;
       if (hasUnsavedChanges()) { e.preventDefault(); e.returnValue = ''; }
