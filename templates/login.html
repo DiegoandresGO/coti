@@ -181,6 +181,10 @@
   </div>
 
   <script>
+    // Si se llegó con parámetros en la dirección (enlaces antiguos), se limpian:
+    // el destino ya viaja en el campo oculto del formulario
+    if (location.search) history.replaceState(null, '', location.pathname);
+
     function togglePwd() {
       const p = document.getElementById('password');
       p.type = p.type === 'password' ? 'text' : 'password';

@@ -781,7 +781,7 @@
 
         if (resp.status === 401) {
           await uiAlert('Tu sesión expiró', 'Vuelve a iniciar sesión. Los cambios sin guardar se perderán.', { icon: '🔒' });
-          window.location.href = '/login?next=' + encodeURIComponent(location.pathname + location.search);
+          window.location.href = '/login';
           return;
         }
 
@@ -1065,7 +1065,7 @@
     async function newQuotation() {
       if (!(await confirmDiscard())) return;
       const resp = await fetch('/api/cotizaciones/nueva');
-      if (resp.status === 401) { window.location.href = '/login?next=/'; return; }
+      if (resp.status === 401) { window.location.href = '/login'; return; }
       const data = await resp.json();
       currentProposal = data;
       populateForm(data);
@@ -1079,7 +1079,7 @@
       if (!editingId) return;
       const data = collectData();
       const resp = await fetch('/api/cotizaciones/nueva');
-      if (resp.status === 401) { window.location.href = '/login?next=/'; return; }
+      if (resp.status === 401) { window.location.href = '/login'; return; }
       const tpl = await resp.json();
       delete data.original_id;
       delete data.access_token;
@@ -1100,7 +1100,7 @@
         { icon: '🗑️', confirmText: 'Eliminar', danger: true });
       if (!ok) return;
       const resp = await fetch('/api/cotizaciones/' + encodeURIComponent(id), { method: 'DELETE' });
-      if (resp.status === 401) { window.location.href = '/login?next=/'; return; }
+      if (resp.status === 401) { window.location.href = '/login'; return; }
       if (!resp.ok) { showToast('⚠️ No se pudo eliminar la cotización.', 'error'); }
       else { showToast('🗑️ Cotización ' + id + ' eliminada'); }
       if (editingId && editingId.toUpperCase() === id.toUpperCase()) editingId = '';
@@ -1149,7 +1149,7 @@
         { icon: '🔄', confirmText: 'Generar enlace nuevo', danger: true });
       if (!ok) return;
       const resp = await fetch('/api/cotizaciones/' + encodeURIComponent(editingId) + '/regenerar-enlace', { method: 'POST' });
-      if (resp.status === 401) { window.location.href = '/login?next=/'; return; }
+      if (resp.status === 401) { window.location.href = '/login'; return; }
       if (!resp.ok) { showToast('⚠️ No se pudo generar el enlace nuevo.', 'error'); return; }
       const res = await resp.json();
       currentProposal.access_token = res.access_token;
@@ -1213,7 +1213,7 @@
     async function marcarSolicitudesAtendidas() {
       if (!editingId) { showToast('⚠️ Abre una cotización guardada primero.', 'error'); return; }
       const resp = await fetch('/api/cotizaciones/' + encodeURIComponent(editingId) + '/solicitudes/atendidas', { method: 'POST' });
-      if (resp.status === 401) { window.location.href = '/login?next=/'; return; }
+      if (resp.status === 401) { window.location.href = '/login'; return; }
       if (!resp.ok) { showToast('⚠️ No se pudieron marcar las solicitudes.', 'error'); return; }
       (currentProposal.client_requests || []).forEach(r => { r.attended = true; });
       renderClientRequests(currentProposal.client_requests || []);
@@ -1326,7 +1326,7 @@
         if (resp.status === 401) {
           loggingOut = true;
           window.onbeforeunload = null;
-          window.location.replace('/login?next=/');
+          window.location.replace('/login');
         }
       } catch (e) {}
     }

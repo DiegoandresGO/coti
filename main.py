@@ -1,6 +1,6 @@
 import os
 import unicodedata
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 import hmac
 import hashlib
 import time
@@ -120,6 +120,20 @@ def clear_session_cookie(response):
     )
 
 
+# Aviso de "sesión cerrada por inactividad": viaja en una cookie corta para que
+# la dirección del login no muestre parámetros
+NOTICE_COOKIE = "login_notice"
+NOTICE_COOKIE_SECONDS = 120
+
+
+def _read_notice_cookie(request: Request):
+    """Devuelve (motivo, next) de la cookie de aviso, o ('', '') si no hay."""
+    raw = request.cookies.get(NOTICE_COOKIE) or ""
+    if not raw.startswith("inactividad|"):
+        return "", ""
+    return "inactividad", unquote(raw.split("|", 1)[1])[:300]
+
+
 def safe_next(url: str) -> str:
     """Solo permite redirigir a rutas internas (evita //sitio-externo.com)."""
     url = url or "/"
@@ -194,18 +208,26 @@ async def friendly_http_error(request: Request, exc: StarletteHTTPException):
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request, next: str = "/", motivo: str = ""):
     """Página de acceso para administradores."""
-    next = safe_next(next)
+    # El aviso de inactividad llega por cookie; los parámetros en la dirección
+    # se siguen aceptando por si queda algún enlace antiguo guardado
+    cookie_motivo, cookie_next = _read_notice_cookie(request)
+    motivo = motivo or cookie_motivo
+    next = safe_next(next if next != "/" else (cookie_next or "/"))
+
     if is_admin_authenticated(request):
         return RedirectResponse(url=next, status_code=303)
 
     notice = None
     if motivo == "inactividad":
         notice = f"Tu sesión se cerró tras {SESSION_TIMEOUT_MINUTES} minutos de inactividad. Vuelve a ingresar."
-    return templates.TemplateResponse(request, "login.html", {
+    response = templates.TemplateResponse(request, "login.html", {
         "next_url": next,
         "error": None,
         "notice": notice
     })
+    if cookie_motivo:
+        response.delete_cookie(NOTICE_COOKIE, path="/", httponly=True, samesite="lax")
+    return response
 
 
 @app.post("/login", response_class=HTMLResponse)
@@ -229,14 +251,23 @@ async def login_submit(request: Request):
 
 @app.get("/logout")
 async def logout(motivo: str = "", next: str = "/"):
-    """Cierra la sesión administrativa."""
-    url = "/login"
-    if motivo == "inactividad":
-        url = f"/login?motivo=inactividad&next={quote(safe_next(next))}"
+    """Cierra la sesión administrativa y lleva al login con una dirección limpia."""
     # El token se invalida también en el servidor, no solo en el navegador
     storage.rotate_session_nonce()
-    response = RedirectResponse(url=url, status_code=303)
+    response = RedirectResponse(url="/login", status_code=303)
     clear_session_cookie(response)
+    if motivo == "inactividad":
+        # El aviso y el destino viajan en una cookie de corta duración, así la
+        # barra de direcciones queda en /login, sin parámetros a la vista
+        response.set_cookie(
+            key=NOTICE_COOKIE,
+            value=f"inactividad|{quote(safe_next(next), safe='')}",
+            max_age=NOTICE_COOKIE_SECONDS,
+            path="/",
+            httponly=True,
+            samesite="lax",
+            secure=_cookie_secure(),
+        )
     return no_store(response)
 
 
@@ -272,7 +303,7 @@ async def refresh_admin_session(request: Request, call_next):
 async def admin_dashboard(request: Request, id: str = ""):
     """Panel de administración y creación de cotizaciones (SOLO ADMINS)."""
     if not is_admin_authenticated(request):
-        return RedirectResponse(url="/login?next=/", status_code=303)
+        return RedirectResponse(url="/login", status_code=303)
 
     # Abrir la cotización pedida (?id=...) o la más reciente
     quotes = storage.list_quotations()
