@@ -488,6 +488,11 @@ async def save_quote(request: Request, payload: dict):
         payload["client_selected_at"] = existing["client_selected_at"]
     else:
         payload.pop("client_selected_at", None)
+    # La confirmación del cliente se conserva mientras siga el mismo plan
+    if existing.get("client_confirmed_at") and existing.get("selected_plan_index") == sel:
+        payload["client_confirmed_at"] = existing["client_confirmed_at"]
+    else:
+        payload.pop("client_confirmed_at", None)
     payload.pop("access_token", None)
     # Las solicitudes del cliente se conservan: el panel no las envía
     if existing.get("client_requests"):
@@ -524,10 +529,13 @@ async def select_plan(request: Request, token: str, payload: dict):
         plan_index = int(payload.get("plan_index", 0))
     except (TypeError, ValueError):
         plan_index = -1
+    if data.get("client_confirmed_at"):
+        return {"status": "error", "message": "El plan ya fue confirmado"}
     if data.get("is_test"):
         if not 0 <= plan_index < len(data.get("plans") or []):
             return {"status": "error", "message": "Índice de plan inválido"}
         data["selected_plan_index"] = plan_index
+        data["client_selected_at"] = storage._now()
         storage.update_test_copy(token, data)
         return {"status": "ok", "selected_plan_index": plan_index, "test": True}
     if storage.set_selected_plan(data["quote_number"], plan_index):
@@ -577,20 +585,28 @@ async def client_request(request: Request, token: str, payload: dict):
     if kind == "modificacion" and not message:
         raise HTTPException(status_code=400, detail="Describe los cambios que necesitas en la cotización.")
 
+    if kind == "aceptacion" and data.get("client_confirmed_at"):
+        return {"status": "ok", "kind": kind, "already_confirmed": True,
+                "confirmed_at": data["client_confirmed_at"], "whatsapp_url": None}
+    confirmed_at = None
     if data.get("is_test"):
         # Simulación: no se registra la solicitud en la cotización real
-        if kind == "aceptacion" and plan_index is not None:
-            data["selected_plan_index"] = plan_index
+        if kind == "aceptacion":
+            confirmed_at = storage._now()
+            data["client_confirmed_at"] = confirmed_at
+            if plan_index is not None:
+                data["selected_plan_index"] = plan_index
+                data["client_selected_at"] = data.get("client_selected_at") or confirmed_at
             storage.update_test_copy(token, data)
     else:
-        if kind == "aceptacion" and plan_index is not None:
-            storage.set_selected_plan(data["quote_number"], plan_index)
-            data["selected_plan_index"] = plan_index
-        storage.add_client_request(data["quote_number"], kind, plan_index, message)
+        entry = storage.add_client_request(data["quote_number"], kind, plan_index, message)
+        if kind == "aceptacion" and entry:
+            confirmed_at = entry["created_at"]
     whatsapp_url = _whatsapp_url(data, plan_index, kind, message) if kind == "modificacion" else None
     return {
         "status": "ok",
         "kind": kind,
+        "confirmed_at": confirmed_at,
         "whatsapp_url": whatsapp_url,
         "next_step": "Luego de la selección, el siguiente proceso es definir el contrato legal para proceder con la implementación."
     }

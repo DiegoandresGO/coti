@@ -767,7 +767,8 @@
     {
       "hasWhatsapp": {{ 'true' if quote_whatsapp(data) else 'false' }},
       "selectedIndex": {{ sel_idx }},
-      "hasChosen": {{ 'true' if has_chosen else 'false' }}
+      "hasChosen": {{ 'true' if has_chosen else 'false' }},
+      "isConfirmed": {{ 'true' if data.client_confirmed_at else 'false' }}
     }
   </script>
 
@@ -778,11 +779,21 @@
     const hasWhatsapp = clientConfig.hasWhatsapp;
     let currentSelectedIndex = clientConfig.selectedIndex;
     let clientHasChosen = clientConfig.hasChosen;
+    let clientConfirmed = clientConfig.isConfirmed;
 
     function updateChoiceState() {
       document.querySelectorAll('.pdf-after-choice').forEach(el => el.hidden = !clientHasChosen);
       document.querySelectorAll('.pdf-before-choice').forEach(el => el.hidden = clientHasChosen);
-      botonesConfirmar().forEach(b => { b.disabled = !clientHasChosen; });
+      botonesConfirmar().forEach(b => {
+        b.disabled = !clientHasChosen || clientConfirmed;
+        b.title = clientConfirmed ? 'Ya confirmaste tu elección' : '';
+      });
+      if (clientConfirmed) {
+        document.querySelectorAll('.wa-label').forEach(el => { el.textContent = '✔ Elección confirmada'; });
+        document.querySelectorAll('.wa-label-sm').forEach(el => { el.textContent = '✔ Confirmado'; });
+        document.querySelectorAll('.plan-card').forEach(c => { c.style.cursor = 'default'; });
+        document.querySelectorAll('.btn-select-plan').forEach(b => { b.disabled = true; });
+      }
     }
 
     // ----- Confirmar plan por WhatsApp / solicitar modificaciones -----
@@ -856,8 +867,7 @@
         </div>
       `;
       box.hidden = false;
-      document.querySelectorAll('.wa-label').forEach(el => { el.textContent = '✔ Elección confirmada'; });
-      document.querySelectorAll('.wa-label-sm').forEach(el => { el.textContent = '✔ Confirmado'; });
+      updateChoiceState();
       if (scrollIntoView) {
         box.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
@@ -871,6 +881,10 @@
       if (esCambio && !message) {
         document.getElementById('cambiosError').hidden = false;
         textarea.focus();
+        return;
+      }
+      if (!esCambio && clientConfirmed) {
+        renderConfirmacionContrato(true);
         return;
       }
       if (!esCambio && !clientHasChosen) {
@@ -904,13 +918,14 @@
         } else {
           // ACEPTACIÓN: NO REDIRIGE A WHATSAPP
           // Expone claramente que luego de la selección el siguiente proceso es definir el contrato legal para proceder con la implementación
-          renderConfirmacionContrato(true);
+          clientConfirmed = true;
         }
       } catch (e) {
         mostrarFeedback('No pudimos enviar tu solicitud. Verifica tu conexión e inténtalo de nuevo.', true);
       } finally {
         botones.forEach((b, i) => { b.disabled = false; b.innerHTML = textosOriginales[i]; });
         updateChoiceState();
+        if (!esCambio && clientConfirmed) renderConfirmacionContrato(true);
       }
     }
 
@@ -920,6 +935,15 @@
 
     // fromUser = true cuando el cliente hace clic; al cargar la página solo se muestra el plan
     function selectPlan(index, fromUser = true) {
+      // Con el plan ya confirmado no se puede cambiar; los ajustes van por "Pedir cambios"
+      if (fromUser && clientConfirmed) {
+        if (index !== currentSelectedIndex) {
+          mostrarFeedback('Ya confirmaste el plan ' + ((quoteData.plans || [])[currentSelectedIndex] || {}).num +
+            '. Si necesitas cambiarlo, usa "Pedir cambios en la cotización".', true);
+          document.getElementById('decisionFeedback').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return;
+      }
       currentSelectedIndex = index;
       if (fromUser) clientHasChosen = true;
       updateChoiceState();
@@ -1039,7 +1063,7 @@
     document.addEventListener('DOMContentLoaded', () => {
       labelStackTables();
       selectPlan(currentSelectedIndex, false);
-      if (clientHasChosen) {
+      if (clientConfirmed) {
         renderConfirmacionContrato(false);
       } else {
         document.querySelectorAll('.wa-label').forEach(el => { el.textContent = '✅ Confirmar mi elección'; });

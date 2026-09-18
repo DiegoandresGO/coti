@@ -133,7 +133,7 @@
         <div style="display: flex; gap: 10px;">
           <button type="button" class="btn btn-secondary btn-sm" onclick="copyShareUrl()">📋 Copiar Enlace</button>
           <button type="button" class="btn btn-secondary btn-sm" onclick="regenerateLink()" title="Invalida el enlace actual y crea uno nuevo">🔄 Nuevo Enlace</button>
-          <a id="btnClientView" href="#" target="_blank" class="btn btn-secondary btn-sm">🌐 Ver como Cliente</a>
+          <a id="btnClientView" href="#" target="_blank" class="btn btn-secondary btn-sm">🌐 Link Cliente</a>
           <a id="btnPdfDownload" href="#" target="_blank" class="btn btn-primary btn-sm">📥 Descargar PDF</a>
         </div>
       </div>
@@ -149,7 +149,7 @@
       </div>
       <div style="display: flex; gap: 8px; flex-wrap: wrap;">
         <button type="button" class="btn btn-secondary btn-sm" id="btnDuplicate" onclick="duplicateQuotation()">📄 Duplicar</button>
-        <button type="button" class="btn btn-secondary btn-sm" id="btnTestMode" onclick="openTestCopy()" title="Abre una copia de prueba con lo que tienes en pantalla. No guarda ni cambia lo que ve el cliente.">🧪 Probar</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="btnTestMode" onclick="openTestCopy()" title="Abre una copia de prueba con lo que tienes en pantalla. No guarda ni cambia lo que ve el cliente.">🧪 Link Pruebas</button>
         <button type="button" class="btn btn-primary btn-sm" onclick="saveQuotation()">💾 Guardar</button>
       </div>
     </div>
@@ -830,16 +830,27 @@
     }
 
     // Copia de prueba: usa los datos del editor (guardados o no) sin tocar la cotización real
-    async function openTestCopy() {
-      const data = collectData();
-      if (!data.plans || !data.plans.length) {
-        showToast('⚠️ La cotización debe tener al menos 1 plan.', 'error');
-        return;
+    // Sin id: usa lo que hay en el editor. Con id (desde el listado): usa la versión guardada.
+    async function openTestCopy(quoteId) {
+      let data = null;
+      if (!quoteId) {
+        data = collectData();
+        if (!data.plans || !data.plans.length) {
+          showToast('⚠️ La cotización debe tener al menos 1 plan.', 'error');
+          return;
+        }
+        if (editingId) data.original_id = editingId;
       }
-      if (editingId) data.original_id = editingId;
       // Se abre la pestaña antes del fetch para que el navegador no la bloquee
       const win = window.open('about:blank', '_blank');
       try {
+        if (quoteId) {
+          const r = await fetch('/api/cotizaciones/' + encodeURIComponent(quoteId));
+          if (r.status === 401) { if (win) win.close(); window.location.href = '/login'; return; }
+          if (!r.ok) { if (win) win.close(); showToast('⚠️ No se encontró la cotización ' + quoteId + '.', 'error'); return; }
+          data = await r.json();
+          data.original_id = quoteId;
+        }
         const resp = await fetch('/api/pruebas', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -957,7 +968,8 @@
           <td style="text-align: right;">
             <div style="display: inline-flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end;">
               <button type="button" class="btn btn-secondary btn-sm" onclick="openQuotation(decodeURIComponent('${id}'))">✏️ Editar</button>
-              <a class="btn btn-secondary btn-sm" href="/c/${encodeURIComponent(x.access_token || '')}" target="_blank">🌐 Ver</a>
+              <a class="btn btn-secondary btn-sm" href="/c/${encodeURIComponent(x.access_token || '')}" target="_blank" title="Abre el enlace real que ve el cliente">🌐 Link Cliente</a>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="openTestCopy(decodeURIComponent('${id}'))" title="Abre una copia de prueba: puedes elegir plan, pedir cambios y descargar el PDF sin afectar al cliente">🧪 Link Pruebas</button>
               <button type="button" class="btn btn-secondary btn-sm" style="color: var(--rose-700);" onclick="deleteQuotation(decodeURIComponent('${id}'))">🗑️</button>
             </div>
           </td>

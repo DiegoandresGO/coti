@@ -273,8 +273,8 @@ def create_test_copy(quote_id: str, data: dict) -> str:
     quote_id = str(quote_id or data.get("quote_number") or "BORRADOR").strip()
     token = TEST_PREFIX + secrets.token_urlsafe(16)
     data = dict(data)
-    data.pop("client_requests", None)
-    data.pop("client_selected_at", None)
+    for key in ("client_requests", "client_selected_at", "client_confirmed_at"):
+        data.pop(key, None)
     limit = datetime.fromtimestamp(datetime.now().timestamp() - TEST_TTL_HOURS * 3600).isoformat(timespec="seconds")
     with _lock, _connect() as conn:
         conn.execute("DELETE FROM quotation_tests WHERE quote_id = ? OR created_at < ?", (quote_id, limit))
@@ -394,6 +394,8 @@ def set_selected_plan(quote_id: str, plan_index: int):
         if not row:
             return None
         data = json.loads(row["data"])
+        if data.get("client_confirmed_at"):
+            return False  # Ya confirmado: el plan no se puede cambiar desde el enlace
         if not 0 <= plan_index < len(data.get("plans", [])):
             return False
         data["selected_plan_index"] = plan_index
@@ -447,6 +449,13 @@ def add_client_request(quote_id: str, kind: str, plan_index, message: str):
             if 0 <= entry["plan_index"] < len(plans):
                 plan = plans[entry["plan_index"]]
         entry["plan_label"] = f'{plan.get("num", "")} — {plan.get("name", "")}'.strip(" —") if plan else ""
+        if entry["kind"] == "aceptacion":
+            if data.get("client_confirmed_at"):
+                return {**entry, "already_confirmed": True}  # No se registra dos veces
+            data["client_confirmed_at"] = entry["created_at"]
+            if plan:
+                data["selected_plan_index"] = entry["plan_index"]
+                data["client_selected_at"] = data.get("client_selected_at") or entry["created_at"]
         requests.append(entry)
         data["client_requests"] = requests[-50:]
         conn.execute("UPDATE quotations SET data = ?, updated_at = ? WHERE id = ?",
@@ -545,6 +554,7 @@ def list_quotations():
             "quote_date": q_data.get("quote_date", ""),
             "created_at": row["created_at"],
             "client_selected_at": q_data.get("client_selected_at"),
+            "client_confirmed_at": q_data.get("client_confirmed_at"),
             "pending_requests": sum(1 for r in (q_data.get("client_requests") or []) if not r.get("attended")),
             "selected_plan": (f'{_selected_plan(q_data).get("num", "")} — {_selected_plan(q_data).get("name", "")}'
                               if q_data.get("client_selected_at") else ""),
