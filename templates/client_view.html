@@ -761,6 +761,25 @@
     </div>
   </div>
 
+  <!-- MODAL: PROPUESTA ACEPTADA -->
+  <div class="modal-overlay" id="modalAceptada" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modalAceptadaTitle" style="text-align: center; max-width: 460px;">
+      <div style="width: 72px; height: 72px; margin: 0 auto 14px; border-radius: 50%; background: #DCFCE7; border: 2px solid #86EFAC; display: flex; align-items: center; justify-content: center; font-size: 36px;">✅</div>
+      <h3 class="modal-title" id="modalAceptadaTitle" style="justify-content: center;">¡Propuesta comercial aceptada con éxito!</h3>
+      <p class="modal-text" style="margin-top: 8px;">
+        Registramos la confirmación del <strong id="modalAceptadaPlan"></strong>
+        para la cotización <strong>{{ data.quote_number }}</strong>.
+      </p>
+      <p class="modal-text" style="font-size: 13px;">
+        El siguiente paso es definir el contrato legal para iniciar la implementación. Nos comunicaremos contigo muy pronto.
+      </p>
+      <div class="modal-actions" style="justify-content: center; flex-wrap: wrap;">
+        <a id="modalAceptadaPdf" href="#" target="_blank" class="btn btn-secondary">📥 Descargar PDF</a>
+        <button type="button" class="btn btn-primary" onclick="cerrarModalAceptada()">Entendido</button>
+      </div>
+    </div>
+  </div>
+
   <!-- DATOS DE LA PROPUESTA (JSON SEGURO) -->
   <script id="quoteDataJson" type="application/json">{{ data | tojson | safe }}</script>
   <script id="clientConfigJson" type="application/json">
@@ -819,6 +838,17 @@
 
     function cerrarModalCambios() {
       document.getElementById('modalCambios').hidden = true;
+    }
+
+    function abrirModalAceptada() {
+      const plan = (quoteData.plans || [])[currentSelectedIndex] || {};
+      document.getElementById('modalAceptadaPlan').textContent = plan.num ? (plan.num + ' — ' + plan.name) : 'plan seleccionado';
+      document.getElementById('modalAceptadaPdf').href = `/c/${quoteData.access_token}/pdf?plan_index=${currentSelectedIndex}`;
+      document.getElementById('modalAceptada').hidden = false;
+    }
+
+    function cerrarModalAceptada() {
+      document.getElementById('modalAceptada').hidden = true;
     }
 
     function renderConfirmacionContrato(scrollIntoView = false) {
@@ -925,7 +955,10 @@
       } finally {
         botones.forEach((b, i) => { b.disabled = false; b.innerHTML = textosOriginales[i]; });
         updateChoiceState();
-        if (!esCambio && clientConfirmed) renderConfirmacionContrato(true);
+        if (!esCambio && clientConfirmed) {
+          renderConfirmacionContrato(false);
+          abrirModalAceptada();
+        }
       }
     }
 
@@ -1073,8 +1106,11 @@
       document.getElementById('modalCambios').addEventListener('click', (ev) => {
         if (ev.target.id === 'modalCambios') cerrarModalCambios();
       });
+      document.getElementById('modalAceptada').addEventListener('click', (ev) => {
+        if (ev.target.id === 'modalAceptada') cerrarModalAceptada();
+      });
       document.addEventListener('keydown', (ev) => {
-        if (ev.key === 'Escape') cerrarModalCambios();
+        if (ev.key === 'Escape') { cerrarModalCambios(); cerrarModalAceptada(); }
       });
     });
   </script>
