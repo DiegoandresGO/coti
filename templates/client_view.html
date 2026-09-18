@@ -569,6 +569,18 @@
             {% endfor %}
           </ul>
         </div>
+        {% if data.exclusions %}
+        <div style="margin-top: 14px; padding: 14px 16px; border-radius: 12px; background: rgba(16, 185, 129, 0.10); border: 1px solid rgba(16, 185, 129, 0.35); display: flex; gap: 12px; align-items: flex-start;">
+          <span style="font-size: 22px; line-height: 1;">🤝</span>
+          <div style="flex: 1;">
+            <div style="font-size: 14px; font-weight: 800; color: #10B981;">¡Tranquilo, no estás solo en esto!</div>
+            <p style="font-size: 13px; margin: 4px 0 10px; opacity: 0.85; line-height: 1.5;">
+              Si lo deseas, también podemos apoyarte a cotizar y gestionar estos servicios (hosting, dominio, cuentas de tiendas y más) para que no tengas que preocuparte por nada.
+            </p>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="pedirApoyoExclusiones()">💬 Quiero que me apoyen con esto</button>
+          </div>
+        </div>
+        {% endif %}
       </section>
 
       <!-- Limitantes -->
@@ -834,6 +846,15 @@
       document.getElementById('cambiosError').hidden = true;
       document.getElementById('modalCambios').hidden = false;
       document.getElementById('cambiosTexto').focus();
+    }
+
+    // Abre la solicitud de cambios con un mensaje ya redactado para cotizar las exclusiones
+    function pedirApoyoExclusiones() {
+      const textarea = document.getElementById('cambiosTexto');
+      if (!textarea.value.trim()) {
+        textarea.value = 'Me gustaría que también me apoyen cotizando los costos no asumidos (hosting, dominio, cuentas de tiendas, etc.).';
+      }
+      abrirModalCambios();
     }
 
     function cerrarModalCambios() {
