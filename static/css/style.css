@@ -376,39 +376,6 @@ body {
   box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);
 }
 
-/* Barra Flotante Inferior para el Cliente */
-.floating-action-bar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: rgba(11, 15, 25, 0.95);
-  backdrop-filter: blur(12px);
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
-  padding: 14px 20px;
-  z-index: 100;
-  box-shadow: 0 -10px 25px rgba(0, 0, 0, 0.25);
-}
-
-.floating-action-inner {
-  max-width: 1120px;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 14px;
-}
-
-.floating-kpi-text {
-  color: #FFFFFF;
-  font-size: 14px;
-}
-
-.floating-kpi-text strong {
-  color: #A5B4FC;
-  font-size: 16px;
-}
 
 .plan-badge {
   background: linear-gradient(135deg, #4F46E5 0%, #6366F1 100%);
@@ -828,36 +795,6 @@ textarea.form-control {
     grid-template-columns: 1fr;
   }
 
-  /* Barra flotante inferior compacta */
-  .floating-action-bar {
-    padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
-  }
-  .floating-action-inner {
-    flex-wrap: nowrap;
-    gap: 10px;
-  }
-  .floating-kpi-text {
-    font-size: 12px;
-    line-height: 1.35;
-    min-width: 0;
-  }
-  .floating-kpi-text .kpi-label,
-  .floating-kpi-text .kpi-sep {
-    display: none;
-  }
-  .floating-kpi-text strong {
-    font-size: 13px;
-  }
-  #floatingPlanText {
-    display: block;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .floating-action-inner .btn {
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
 
   /* Panel admin */
   .tab-btn {
@@ -1040,7 +977,6 @@ body { background-color: var(--page-bg); }
 [data-theme="dark"] .alert-emerald { background: var(--emerald-50); border-color: rgba(52, 211, 153, 0.35); color: #A7F3D0; }
 [data-theme="dark"] .alert-slate { background: var(--slate-50); border-color: var(--slate-200); color: var(--slate-700); }
 
-[data-theme="dark"] .floating-action-bar { background: rgba(7, 11, 20, 0.92); border-top-color: var(--slate-200); }
 
 /* Colores de texto oscuros escritos en línea */
 [data-theme="dark"] [style*="color: var(--slate-900)"],

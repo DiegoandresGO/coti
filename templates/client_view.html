@@ -715,28 +715,6 @@
 
   </main>
 
-  <!-- BARRA FLOTANTE INFERIOR CON SELECCIÓN ACTIVA -->
-  <div class="floating-action-bar">
-    <div class="floating-action-inner">
-      <div class="floating-kpi-text pdf-before-choice" {% if has_chosen %}hidden{% endif %}>
-        <strong style="color: #FFFFFF;">Elige el plan que necesitas</strong>
-        <span class="kpi-label" style="color: var(--slate-400);"> para descargar tu propuesta en PDF</span>
-      </div>
-      <div class="floating-kpi-text pdf-after-choice" {% if not has_chosen %}hidden{% endif %}>
-        <span class="kpi-label">Plan Seleccionado: </span><strong id="floatingPlanText">Opción 2 — Plan Estándar Profesional</strong> 
-        <span class="kpi-sep" style="color: var(--slate-400); margin: 0 6px;">|</span> 
-        <span class="kpi-label">Total: </span> <strong id="floatingTotalText" style="color: #67E8F9;">$ 4.000.000 COP</strong>
-      </div>
-      <div style="display: flex; gap: 10px; flex-wrap: nowrap;">
-        <a href="#seccionPlanes" class="btn btn-primary btn-sm pdf-before-choice" {% if has_chosen %}hidden{% endif %}>👆 Ver planes</a>
-        <button type="button" id="floatingConfirmBtn" class="btn btn-sm decision-confirm-btn wa-label-sm pdf-after-choice" onclick="enviarDecision('aceptacion')" {% if not has_chosen %}hidden{% endif %}>
-          ✅ Confirmar<span class="hide-xs"> elección</span>
-        </button>
-        <a href="#seccionDecision" class="btn btn-secondary btn-sm">📝 <span class="hide-xs">Pedir </span>cambios</a>
-      </div>
-    </div>
-  </div>
-
   <!-- MODAL: SOLICITAR MODIFICACIONES -->
   <div class="modal-overlay" id="modalCambios" hidden>
     <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modalCambiosTitle">
@@ -782,9 +760,9 @@
     }
 
     // ----- Confirmar plan por WhatsApp / solicitar modificaciones -----
-    // El cliente puede confirmar desde la sección de cierre o desde la barra flotante
+    // El cliente confirma desde la sección de cierre
     function botonesConfirmar() {
-      return ['btnConfirmWhatsapp', 'floatingConfirmBtn']
+      return ['btnConfirmWhatsapp']
         .map(id => document.getElementById(id))
         .filter(Boolean);
     }
@@ -853,7 +831,6 @@
       `;
       box.hidden = false;
       document.querySelectorAll('.wa-label').forEach(el => { el.textContent = '✔ Elección confirmada'; });
-      document.querySelectorAll('.wa-label-sm').forEach(el => { el.textContent = '✔ Confirmado'; });
       if (scrollIntoView) {
         box.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
@@ -997,11 +974,9 @@
       document.getElementById('rowNetoVal').textContent = formatCOP(netoVal);
       labelStackTables();
 
-      // 4. Actualizar Barra Flotante y el cierre comercial
+      // 4. Actualizar el cierre comercial
       const decisionLabel = document.getElementById('decisionPlanLabel');
       if (decisionLabel) decisionLabel.textContent = plan.num + ' — ' + plan.name;
-      document.getElementById('floatingPlanText').textContent = plan.num + ' (' + plan.name + ')';
-      document.getElementById('floatingTotalText').textContent = formatCOP(retentions.length ? netoVal : totalVal);
 
       // 5. Actualizar Enlaces de Descarga de PDF
       const pdfUrl = `/c/${quoteData.access_token}/pdf?plan_index=${index}`;
@@ -1039,7 +1014,6 @@
         renderConfirmacionContrato(false);
       } else {
         document.querySelectorAll('.wa-label').forEach(el => { el.textContent = '✅ Confirmar mi elección'; });
-        document.querySelectorAll('.wa-label-sm').forEach(el => { el.textContent = '✅ Confirmar'; });
       }
       // Cerrar el modal con Escape o al hacer clic fuera de la tarjeta
       document.getElementById('modalCambios').addEventListener('click', (ev) => {
