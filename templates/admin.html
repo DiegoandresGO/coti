@@ -154,6 +154,17 @@
       </div>
     </div>
 
+    <!-- AVISO DE SOLICITUDES PENDIENTES DEL CLIENTE -->
+    <div id="pendingRequestsAlert" class="card" hidden style="padding: 12px 16px; background: #FFFBEB; border: 1.5px solid #FCD34D; border-left: 4px solid #F59E0B;">
+      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+        <div style="font-size: 14px; color: #92400E;">
+          <strong id="pendingRequestsText"></strong>
+          <div id="pendingRequestsPreview" style="font-size: 12.5px; color: #B45309; margin-top: 2px;"></div>
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" onclick="goToClientRequests()">💬 Ver solicitudes</button>
+      </div>
+    </div>
+
     <!-- PESTAÑAS DE CONFIGURACIÓN -->
     <div class="tabs-header">
       <button type="button" class="tab-btn active" onclick="switchTab('tabScope')">🎯 1. Alcance & Módulos</button>
@@ -420,7 +431,7 @@
         </div>
 
         <!-- SOLICITUDES ENVIADAS POR EL CLIENTE DESDE SU ENLACE -->
-        <div class="card" style="margin-top: 18px;">
+        <div class="card" id="clientRequestsCard" style="margin-top: 18px; scroll-margin-top: 90px;">
           <div class="section-header" style="justify-content: space-between;">
             <div style="display: flex; align-items: center; gap: 10px;">
               <span class="section-num">💬</span>
@@ -942,7 +953,7 @@
         return `<tr>
           <td><strong style="color: var(--primary);">${escapeHtml(x.id)}</strong><br><span style="font-size: 12px; color: var(--slate-500);">${escapeHtml(x.quote_date)}</span></td>
           <td><strong>${escapeHtml(x.client_name || '—')}</strong><br><span style="font-size: 12px; color: var(--slate-500);">${escapeHtml(x.client_company)}</span></td>
-          <td>${escapeHtml(x.project_title)}${x.pending_requests ? `<br><span style="font-size: 12px; font-weight: 700; color: #B45309;">💬 ${x.pending_requests} ${x.pending_requests === 1 ? 'solicitud pendiente' : 'solicitudes pendientes'}</span>` : ''}</td>
+          <td>${escapeHtml(x.project_title)}${x.pending_requests ? `<br><a href="#" onclick="openQuotation(decodeURIComponent('${id}'), true); return false;" title="Ver las solicitudes del cliente" style="display: inline-block; margin-top: 4px; font-size: 12px; font-weight: 700; color: #92400E; background: #FEF3C7; border: 1px solid #FCD34D; padding: 2px 8px; border-radius: 12px; text-decoration: none;">💬 ${x.pending_requests} ${x.pending_requests === 1 ? 'solicitud pendiente' : 'solicitudes pendientes'} · Ver →</a>` : ''}</td>
           <td style="text-align: right;">
             <div style="display: inline-flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end;">
               <button type="button" class="btn btn-secondary btn-sm" onclick="openQuotation(decodeURIComponent('${id}'))">✏️ Editar</button>
@@ -1083,9 +1094,11 @@
       showEditorView('tabScope');
     }
 
-    async function openQuotation(id) {
+    async function openQuotation(id, toRequests = false) {
       // Si ya está abierta, solo llevar al formulario
-      if (isEditorOpen() && editingId && editingId.toUpperCase() === id.toUpperCase()) { focusEditor(); return; }
+      if (isEditorOpen() && editingId && editingId.toUpperCase() === id.toUpperCase()) {
+        toRequests ? goToClientRequests() : focusEditor(); return;
+      }
       if (!(await confirmDiscard())) return;
       const resp = await fetch('/api/cotizaciones/' + encodeURIComponent(id));
       if (!resp.ok) { uiAlert('Cotización no encontrada', 'No se encontró la cotización ' + id + '.', { icon: '⚠️' }); return refreshQuotesList(); }
@@ -1096,6 +1109,7 @@
       setEditing(data.quote_number);
       showShareBanner(data.quote_number);
       focusEditor();
+      if (toRequests) goToClientRequests();
     }
 
     async function newQuotation() {
@@ -1197,9 +1211,29 @@
     // ==========================================
     // SOLICITUDES DEL CLIENTE (ELECCIÓN DE PLAN / CAMBIOS)
     // ==========================================
+    function updatePendingAlert(requests) {
+      const alert = document.getElementById('pendingRequestsAlert');
+      const pending = requests.filter(r => !r.attended);
+      alert.hidden = !pending.length;
+      if (!pending.length) return;
+      document.getElementById('pendingRequestsText').textContent = '💬 El cliente tiene ' + pending.length +
+        (pending.length === 1 ? ' solicitud pendiente' : ' solicitudes pendientes');
+      const last = pending[pending.length - 1];
+      const tipo = last.kind === 'modificacion' ? 'Pidió cambios' : 'Confirmó plan';
+      const detalle = last.message || last.plan_label || '';
+      document.getElementById('pendingRequestsPreview').textContent =
+        'Última: ' + tipo + (detalle ? ' — ' + (detalle.length > 90 ? detalle.slice(0, 90) + '…' : detalle) : '');
+    }
+
+    function goToClientRequests() {
+      switchTab('tabMeta');
+      setTimeout(() => document.getElementById('clientRequestsCard').scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+    }
+
     function renderClientRequests(requests) {
       const box = document.getElementById('clientRequestsBox');
       if (!box) return;
+      updatePendingAlert(requests);
       box.innerHTML = '';
       if (!requests.length) {
         const empty = document.createElement('p');
