@@ -12,6 +12,8 @@
   --dark-900: #0B0F19;
   --dark-800: #111827;
   --dark-700: #1E293B;
+
+  --card-bg: #FFFFFF;
   
   --slate-50: #F8FAFC;
   --slate-100: #F1F5F9;
@@ -173,6 +175,7 @@ body {
 .hero-title span {
   background: linear-gradient(135deg, #818CF8 0%, #C7D2FE 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -922,6 +925,7 @@ body { background-color: var(--page-bg); }
   --page-bg: #070B14;
   --surface: #0F172A;
   --surface-raised: #131C31;
+  --card-bg: #131C31;
   --navbar-bg: rgba(10, 15, 28, 0.85);
   --table-head: #1E293B;
 
@@ -975,6 +979,14 @@ body { background-color: var(--page-bg); }
 [data-theme="dark"] .ui-dialog {
   background: var(--surface) !important;
   border-color: var(--slate-200);
+}
+[data-theme="dark"] .decision-box,
+[data-theme="dark"] .modal-box {
+  background: var(--surface-raised) !important;
+  border-color: var(--slate-200) !important;
+}
+[data-theme="dark"] .decision-box:hover {
+  border-color: var(--primary-border) !important;
 }
 [data-theme="dark"] .card { box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.03); }
 [data-theme="dark"] .extra-item.is-off { background: var(--slate-50) !important; }

@@ -11,7 +11,7 @@
   <meta name="robots" content="noindex, nofollow">
   <meta name="referrer" content="no-referrer">
   <title>{{ data.project_title }} — Propuesta Técnico-Comercial ({{ data.quote_number }})</title>
-  <link rel="stylesheet" href="/static/css/style.css?v=8">
+  <link rel="stylesheet" href="/static/css/style.css?v=9">
   <style>
     /* Estilos complementarios para la vista interactiva */
     @media (max-width: 640px) {
@@ -31,10 +31,12 @@
       display: flex;
       flex-direction: column;
       gap: 10px;
+      transition: border-color 0.2s, background-color 0.2s;
     }
     .decision-icon { font-size: 26px; line-height: 1; }
     .decision-title { font-size: 16px; font-weight: 800; color: var(--slate-900); }
     .decision-text { font-size: 13.5px; color: var(--slate-600); line-height: 1.5; flex: 1; }
+    .decision-text strong { color: var(--slate-900); font-weight: 700; }
     .decision-hint { font-size: 12px; color: var(--slate-500); }
     .decision-wa-btn { background: #25D366; color: #FFFFFF; border: 1px solid #1EBE5B; }
     .decision-wa-btn:hover { background: #1EBE5B; color: #FFFFFF; }
@@ -53,7 +55,8 @@
     /* Modal de solicitud de cambios */
     .modal-overlay {
       position: fixed; inset: 0; z-index: 120;
-      background: rgba(15, 23, 42, 0.55);
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(4px);
       display: flex; align-items: center; justify-content: center;
       padding: 16px;
     }
@@ -61,8 +64,8 @@
     .modal-box {
       background: var(--card-bg, #FFFFFF);
       border: 1px solid var(--slate-200);
-      border-radius: var(--radius-sm);
-      padding: 22px;
+      border-radius: var(--radius-md);
+      padding: 24px;
       width: 100%; max-width: 520px;
       box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.45);
     }
@@ -76,12 +79,57 @@
       padding: 10px 12px;
       font: inherit; font-size: 13.5px;
       color: var(--slate-900);
-      background: transparent;
+      background: #FFFFFF;
       resize: vertical;
     }
     .modal-textarea:focus { outline: 2px solid var(--primary); outline-offset: 1px; }
     .modal-error { color: #E11D48; font-size: 12.5px; margin-top: 8px; }
     .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+
+    /* Adaptación específica para Modo Oscuro */
+    [data-theme="dark"] .decision-box {
+      background: var(--surface-raised, #131C31) !important;
+      border-color: var(--slate-200) !important;
+    }
+    [data-theme="dark"] .decision-box:hover {
+      border-color: var(--primary-border) !important;
+    }
+    [data-theme="dark"] .decision-box .btn-secondary {
+      background: var(--slate-100) !important;
+      border-color: var(--slate-300) !important;
+      color: var(--slate-800) !important;
+    }
+    [data-theme="dark"] .decision-box .btn-secondary:hover {
+      background: var(--slate-200) !important;
+      border-color: var(--primary-border) !important;
+      color: #FFFFFF !important;
+    }
+    [data-theme="dark"] .modal-overlay {
+      background: rgba(3, 7, 18, 0.75);
+    }
+    [data-theme="dark"] .modal-box {
+      background: var(--surface-raised, #131C31) !important;
+      border-color: var(--slate-200) !important;
+      box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    }
+    [data-theme="dark"] .modal-textarea {
+      background: var(--slate-50, #111A2E) !important;
+      border-color: var(--slate-200) !important;
+      color: var(--slate-900) !important;
+    }
+    [data-theme="dark"] .modal-textarea::placeholder {
+      color: var(--slate-400);
+    }
+    [data-theme="dark"] .decision-feedback {
+      background: rgba(16, 185, 129, 0.12);
+      border-color: rgba(52, 211, 153, 0.35);
+      color: #A7F3D0;
+    }
+    [data-theme="dark"] .decision-feedback.is-error {
+      background: var(--rose-50);
+      border-color: var(--rose-200);
+      color: #FECDD3;
+    }
 
     .plan-scope-list { list-style: none; padding: 0; margin: 0 0 12px; display: grid; gap: 6px; }
     .plan-scope-list li { position: relative; padding-left: 22px; line-height: 1.45; }
@@ -213,7 +261,7 @@
       <!-- Grid de tarjetas interactivas -->
       <div class="plans-grid">
         {% for p in data.plans %}
-        <div class="plan-card {% if p.is_recommended %}recommended{% endif %}" id="planCard{{ loop.index0 }}" onclick="selectPlan({{ loop.index0 }})">
+        <div class="plan-card {% if p.is_recommended %}recommended{% endif %}" id="planCard{{ loop.index0 }}" onclick="selectPlan(Number('{{ loop.index0 }}'))">
           <div>
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
               <span class="plan-num">{{ p.num }}</span>
@@ -539,12 +587,23 @@
     </div>
   </div>
 
+  <!-- DATOS DE LA PROPUESTA (JSON SEGURO) -->
+  <script id="quoteDataJson" type="application/json">{{ data | tojson | safe }}</script>
+  <script id="clientConfigJson" type="application/json">
+    {
+      "hasWhatsapp": {{ 'true' if quote_whatsapp(data) else 'false' }},
+      "selectedIndex": {{ sel_idx }},
+      "hasChosen": {{ 'true' if has_chosen else 'false' }}
+    }
+  </script>
+
   <!-- SCRIPT INTERACTIVO -->
   <script>
-    const quoteData = {{ data | tojson }};
-    const hasWhatsapp = {{ 'true' if quote_whatsapp(data) else 'false' }};
-    let currentSelectedIndex = {{ sel_idx }};
-    let clientHasChosen = {{ 'true' if has_chosen else 'false' }};
+    const quoteData = JSON.parse(document.getElementById('quoteDataJson').textContent);
+    const clientConfig = JSON.parse(document.getElementById('clientConfigJson').textContent);
+    const hasWhatsapp = clientConfig.hasWhatsapp;
+    let currentSelectedIndex = clientConfig.selectedIndex;
+    let clientHasChosen = clientConfig.hasChosen;
 
     function updateChoiceState() {
       document.querySelectorAll('.pdf-after-choice').forEach(el => el.hidden = !clientHasChosen);

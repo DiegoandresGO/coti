@@ -7,7 +7,7 @@
   <script src="/static/js/theme.js"></script>
   <meta name="theme-color" content="#4F46E5">
   <title>Panel de Cotizaciones — Administración</title>
-  <link rel="stylesheet" href="/static/css/style.css?v=8">
+  <link rel="stylesheet" href="/static/css/style.css?v=9">
   <style>
     @media (max-width: 640px) { .hide-xs { display: none; } }
 
@@ -442,8 +442,12 @@
     </div>
   </main>
 
+  <!-- DATOS INICIALES DEL PANEL (JSON SEGURO) -->
+  <script id="initialDataJson" type="application/json">{{ initial_data | tojson | safe }}</script>
+  <script id="quotesListJson" type="application/json">{{ quotes_list | tojson | safe }}</script>
+
   <script>
-    let currentProposal = {{ initial_data | tojson }};
+    let currentProposal = JSON.parse(document.getElementById('initialDataJson').textContent);
 
     // ==========================================
     // CAMPOS DE TEXTO QUE CRECEN AL ESCRIBIR
@@ -826,7 +830,7 @@
     // ==========================================
     // GESTIÓN DE VARIAS COTIZACIONES
     // ==========================================
-    let quotesList = {{ quotes_list | tojson }};
+    let quotesList = JSON.parse(document.getElementById('quotesListJson').textContent);
     let editingId = '';
 
     function formatCOP(v) {
@@ -1231,7 +1235,7 @@
     // ==========================================
     // CIERRE DE SESIÓN POR INACTIVIDAD
     // ==========================================
-    const SESSION_TIMEOUT_MS = {{ session_timeout_minutes|default(30) }} * 60 * 1000;
+    const SESSION_TIMEOUT_MS = Number('{{ session_timeout_minutes|default(30) }}') * 60 * 1000;
     const SESSION_WARNING_MS = Math.min(60 * 1000, SESSION_TIMEOUT_MS / 2);  // aviso 1 minuto antes
     const PING_EVERY_MS = 60 * 1000;
     let lastActivity = Date.now();
