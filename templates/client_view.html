@@ -38,19 +38,137 @@
     .decision-text { font-size: 13.5px; color: var(--slate-600); line-height: 1.5; flex: 1; }
     .decision-text strong { color: var(--slate-900); font-weight: 700; }
     .decision-hint { font-size: 12px; color: var(--slate-500); }
-    .decision-wa-btn { background: #25D366; color: #FFFFFF; border: 1px solid #1EBE5B; }
-    .decision-wa-btn:hover { background: #1EBE5B; color: #FFFFFF; }
-    .decision-wa-btn[disabled] { opacity: 0.55; cursor: not-allowed; }
+    .decision-wa-btn, .decision-confirm-btn {
+      background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      color: #FFFFFF;
+      border: 1px solid #059669;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+    }
+    .decision-wa-btn:hover, .decision-confirm-btn:hover {
+      background: #059669;
+      color: #FFFFFF;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(16, 185, 129, 0.35);
+    }
+    .decision-wa-btn[disabled], .decision-confirm-btn[disabled] {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
     .decision-feedback {
       margin-top: 16px;
+    }
+    .decision-feedback.is-error {
       padding: 12px 14px;
       border-radius: var(--radius-sm);
       font-size: 13.5px;
-      border: 1px solid var(--emerald-600);
-      color: var(--emerald-700);
-      background: rgba(16, 185, 129, 0.08);
+      border: 1px solid #E11D48;
+      color: #E11D48;
+      background: rgba(225, 29, 72, 0.08);
     }
-    .decision-feedback.is-error { border-color: #E11D48; color: #E11D48; background: rgba(225, 29, 72, 0.08); }
+    .decision-success-card {
+      background: #FFFFFF;
+      border: 1.5px solid #10B981;
+      border-radius: var(--radius-md);
+      padding: 22px 24px;
+      box-shadow: 0 8px 24px -4px rgba(16, 185, 129, 0.12);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .decision-success-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 800;
+      color: #047857;
+      background: #ECFDF5;
+      border: 1px solid #A7F3D0;
+      padding: 4px 10px;
+      border-radius: var(--radius-full);
+      letter-spacing: 0.05em;
+      width: fit-content;
+    }
+    .decision-success-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--slate-900);
+      margin: 4px 0;
+    }
+    .decision-success-text {
+      font-size: 14px;
+      color: var(--slate-600);
+      line-height: 1.5;
+    }
+    .contract-next-box {
+      background: #F8FAFC;
+      border: 1px solid var(--slate-200);
+      border-left: 4px solid #10B981;
+      border-radius: var(--radius-sm);
+      padding: 16px 18px;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+    .contract-icon {
+      font-size: 28px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .contract-content {
+      flex: 1;
+    }
+    .contract-content h4 {
+      font-size: 14.5px;
+      font-weight: 800;
+      color: var(--slate-900);
+      margin-bottom: 6px;
+    }
+    .contract-content p {
+      font-size: 13.5px;
+      color: var(--slate-600);
+      line-height: 1.55;
+      margin-bottom: 12px;
+    }
+    .contract-steps {
+      display: grid;
+      gap: 8px;
+    }
+    .contract-step-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--slate-700);
+    }
+    .contract-step-item .step-num {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--primary-light);
+      color: var(--primary);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+    .contract-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+      padding-top: 12px;
+      border-top: 1px solid var(--slate-200);
+    }
+    .contract-hint {
+      font-size: 12.5px;
+      color: var(--slate-500);
+    }
 
     /* Modal de solicitud de cambios */
     .modal-overlay {
@@ -129,6 +247,54 @@
       background: var(--rose-50);
       border-color: var(--rose-200);
       color: #FECDD3;
+    }
+    [data-theme="dark"] .decision-confirm-btn {
+      background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+      border-color: #10B981 !important;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3) !important;
+    }
+    [data-theme="dark"] .decision-confirm-btn:hover {
+      background: #10B981 !important;
+    }
+    [data-theme="dark"] .decision-success-card {
+      background: var(--surface-raised, #131C31) !important;
+      border-color: rgba(52, 211, 153, 0.4) !important;
+      box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.45);
+    }
+    [data-theme="dark"] .decision-success-badge {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: rgba(52, 211, 153, 0.3);
+      color: #6EE7B7;
+    }
+    [data-theme="dark"] .decision-success-title {
+      color: var(--slate-900);
+    }
+    [data-theme="dark"] .decision-success-text {
+      color: var(--slate-600);
+    }
+    [data-theme="dark"] .contract-next-box {
+      background: var(--slate-50, #111A2E) !important;
+      border-color: var(--slate-200) !important;
+      border-left-color: #34D399 !important;
+    }
+    [data-theme="dark"] .contract-content h4 {
+      color: var(--slate-900);
+    }
+    [data-theme="dark"] .contract-content p {
+      color: var(--slate-600);
+    }
+    [data-theme="dark"] .contract-step-item {
+      color: var(--slate-700);
+    }
+    [data-theme="dark"] .contract-step-item .step-num {
+      background: rgba(99, 102, 241, 0.2);
+      color: #A5B4FC;
+    }
+    [data-theme="dark"] .contract-footer {
+      border-top-color: var(--slate-200);
+    }
+    [data-theme="dark"] .contract-hint {
+      color: var(--slate-400);
     }
 
     .plan-scope-list { list-style: none; padding: 0; margin: 0 0 12px; display: grid; gap: 6px; }
@@ -500,30 +666,34 @@
       </div>
     </section>
 
-    <!-- CIERRE: CONFIRMAR PLAN POR WHATSAPP O PEDIR MODIFICACIONES -->
+    <!-- CIERRE: CONFIRMAR PLAN O PEDIR MODIFICACIONES -->
     <section class="card" id="seccionDecision">
       <div class="section-header">
         <span class="section-num">✅</span>
         <h2 class="section-title">¿Cómo quieres continuar?</h2>
       </div>
       <p style="font-size: 13.5px; color: var(--slate-500); margin-bottom: 18px;">
-        Confirma el plan que elegiste para hablar directamente con el equipo comercial, o cuéntanos qué cambios necesitas en la propuesta.
+        Confirma el plan que elegiste para avanzar hacia la formalización del proyecto, o cuéntanos qué cambios necesitas en la propuesta.
       </p>
 
       <div class="decision-grid">
         <div class="decision-box">
-          <div class="decision-icon">💬</div>
-          <h3 class="decision-title">Confirmar plan y hablar por WhatsApp</h3>
+          <div class="decision-icon">🤝</div>
+          <h3 class="decision-title">Confirmar plan seleccionado</h3>
           <p class="decision-text">
-            Se abrirá WhatsApp con un mensaje listo que incluye tu cotización
-            <strong>{{ data.quote_number }}</strong> y el plan
-            <strong id="decisionPlanLabel">seleccionado</strong>.
+            Acepta la propuesta comercial con el plan
+            <strong id="decisionPlanLabel">seleccionado</strong> para la cotización
+            <strong>{{ data.quote_number }}</strong>.
+            Luego de la selección, el siguiente proceso es definir el contrato legal para proceder con la implementación del desarrollo.
           </p>
-          <button type="button" class="btn btn-lg decision-wa-btn wa-label" id="btnConfirmWhatsapp" onclick="enviarDecision('aceptacion')" {% if not has_chosen %}disabled{% endif %}>
-            💬 Confirmar por WhatsApp
+          <button type="button" class="btn btn-lg decision-confirm-btn wa-label" id="btnConfirmWhatsapp" onclick="enviarDecision('aceptacion')" {% if not has_chosen %}disabled{% endif %}>
+            ✅ Confirmar mi elección
           </button>
           <div class="decision-hint pdf-before-choice" {% if has_chosen %}hidden{% endif %}>
-            Primero elige un plan en la sección 03 para confirmarlo.
+            Primero elige un plan en la sección 03 para habilitar la confirmación.
+          </div>
+          <div class="decision-hint pdf-after-choice" {% if not has_chosen %}hidden{% endif %}>
+            Al confirmar, formalizamos tu aprobación para iniciar el proceso de contratación.
           </div>
         </div>
 
@@ -559,8 +729,8 @@
       </div>
       <div style="display: flex; gap: 10px; flex-wrap: nowrap;">
         <a href="#seccionPlanes" class="btn btn-primary btn-sm pdf-before-choice" {% if has_chosen %}hidden{% endif %}>👆 Ver planes</a>
-        <button type="button" id="floatingConfirmBtn" class="btn btn-sm decision-wa-btn wa-label-sm pdf-after-choice" onclick="enviarDecision('aceptacion')" {% if not has_chosen %}hidden{% endif %}>
-          💬 Confirmar<span class="hide-xs"> por WhatsApp</span>
+        <button type="button" id="floatingConfirmBtn" class="btn btn-sm decision-confirm-btn wa-label-sm pdf-after-choice" onclick="enviarDecision('aceptacion')" {% if not has_chosen %}hidden{% endif %}>
+          ✅ Confirmar<span class="hide-xs"> elección</span>
         </button>
         <a href="#seccionDecision" class="btn btn-secondary btn-sm">📝 <span class="hide-xs">Pedir </span>cambios</a>
       </div>
@@ -636,6 +806,59 @@
       document.getElementById('modalCambios').hidden = true;
     }
 
+    function renderConfirmacionContrato(scrollIntoView = false) {
+      const box = document.getElementById('decisionFeedback');
+      const plan = (quoteData.plans || [])[currentSelectedIndex] || {};
+      const planName = plan.num ? (plan.num + ' — ' + plan.name) : 'Plan seleccionado';
+      const pdfUrl = `/c/${quoteData.access_token}/pdf?plan_index=${currentSelectedIndex}`;
+
+      box.className = 'decision-feedback';
+      box.innerHTML = `
+        <div class="decision-success-card">
+          <div class="decision-success-header">
+            <div class="decision-success-badge">✅ ELECCIÓN REGISTRADA FORMALMENTE</div>
+            <h3 class="decision-success-title">¡Propuesta comercial aceptada con éxito!</h3>
+            <p class="decision-success-text">
+              Hemos registrado la confirmación del <strong>${planName}</strong> para la cotización <strong>${quoteData.quote_number}</strong>.
+            </p>
+          </div>
+          <div class="contract-next-box">
+            <div class="contract-icon">⚖️</div>
+            <div class="contract-content">
+              <h4>Siguiente proceso: Formalización del contrato legal</h4>
+              <p>Luego de la selección, el siguiente proceso es <strong>definir el contrato legal</strong> para proceder con la <strong>implementación</strong>.</p>
+              <div class="contract-steps">
+                <div class="contract-step-item">
+                  <span class="step-num">1</span>
+                  <span>Definición y validación de cláusulas legales, hitos de pago y alcance técnico.</span>
+                </div>
+                <div class="contract-step-item">
+                  <span class="step-num">2</span>
+                  <span>Firma del contrato legal de prestación de servicios y acuerdos de confidencialidad.</span>
+                </div>
+                <div class="contract-step-item">
+                  <span class="step-num">3</span>
+                  <span>Kickoff formal e inicio de la fase de implementación y despliegue del software.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="contract-footer">
+            <a href="${pdfUrl}" target="_blank" class="btn btn-primary btn-sm">
+              📥 Descargar Propuesta Oficial en PDF
+            </a>
+            <span class="contract-hint">Nos comunicaremos a ${quoteData.client_contact || 'tus canales de contacto'} para el envío de la minuta contractual.</span>
+          </div>
+        </div>
+      `;
+      box.hidden = false;
+      document.querySelectorAll('.wa-label').forEach(el => { el.textContent = '✔ Elección confirmada'; });
+      document.querySelectorAll('.wa-label-sm').forEach(el => { el.textContent = '✔ Confirmado'; });
+      if (scrollIntoView) {
+        box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+
     async function enviarDecision(kind) {
       const esCambio = kind === 'modificacion';
       const textarea = document.getElementById('cambiosTexto');
@@ -667,18 +890,18 @@
         if (esCambio) {
           cerrarModalCambios();
           textarea.value = '';
-        }
-        if (info.whatsapp_url) {
-          window.open(info.whatsapp_url, '_blank', 'noopener');
-          mostrarFeedback(esCambio
-            ? 'Registramos tu solicitud de cambios y abrimos WhatsApp con el detalle. Si no se abrió, revisa el bloqueo de ventanas emergentes.'
-            : 'Registramos tu elección y abrimos WhatsApp para continuar. Si no se abrió, revisa el bloqueo de ventanas emergentes.', false);
+          if (info.whatsapp_url) {
+            window.open(info.whatsapp_url, '_blank', 'noopener');
+            mostrarFeedback('Registramos tu solicitud de cambios y abrimos WhatsApp con el detalle. Si no se abrió, revisa el bloqueo de ventanas emergentes.', false);
+          } else {
+            mostrarFeedback('Registramos tu solicitud de cambios. El equipo comercial te contactará por el medio que dejaste en la cotización.', false);
+          }
+          document.getElementById('decisionFeedback').scrollIntoView({ behavior: 'smooth', block: 'center' });
         } else {
-          mostrarFeedback(esCambio
-            ? 'Registramos tu solicitud de cambios. El equipo comercial te contactará por el medio que dejaste en la cotización.'
-            : 'Registramos tu elección. El equipo comercial te contactará para continuar.', false);
+          // ACEPTACIÓN: NO REDIRIGE A WHATSAPP
+          // Expone claramente que luego de la selección el siguiente proceso es definir el contrato legal para proceder con la implementación
+          renderConfirmacionContrato(true);
         }
-        document.getElementById('decisionFeedback').scrollIntoView({ behavior: 'smooth', block: 'center' });
       } catch (e) {
         mostrarFeedback('No pudimos enviar tu solicitud. Verifica tu conexión e inténtalo de nuevo.', true);
       } finally {
@@ -812,8 +1035,9 @@
     document.addEventListener('DOMContentLoaded', () => {
       labelStackTables();
       selectPlan(currentSelectedIndex, false);
-      // Sin número de WhatsApp configurado, la confirmación solo queda registrada
-      if (!hasWhatsapp) {
+      if (clientHasChosen) {
+        renderConfirmacionContrato(false);
+      } else {
         document.querySelectorAll('.wa-label').forEach(el => { el.textContent = '✅ Confirmar mi elección'; });
         document.querySelectorAll('.wa-label-sm').forEach(el => { el.textContent = '✅ Confirmar'; });
       }

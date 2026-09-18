@@ -550,7 +550,13 @@ async def client_request(token: str, payload: dict):
         storage.set_selected_plan(data["quote_number"], plan_index)
         data["selected_plan_index"] = plan_index
     storage.add_client_request(data["quote_number"], kind, plan_index, message)
-    return {"status": "ok", "whatsapp_url": _whatsapp_url(data, plan_index, kind, message)}
+    whatsapp_url = _whatsapp_url(data, plan_index, kind, message) if kind == "modificacion" else None
+    return {
+        "status": "ok",
+        "kind": kind,
+        "whatsapp_url": whatsapp_url,
+        "next_step": "Luego de la selección, el siguiente proceso es definir el contrato legal para proceder con la implementación."
+    }
 
 
 @app.post("/api/cotizaciones/{quote_id}/solicitudes/atendidas")
