@@ -149,6 +149,7 @@
       </div>
       <div style="display: flex; gap: 8px; flex-wrap: wrap;">
         <button type="button" class="btn btn-secondary btn-sm" id="btnDuplicate" onclick="duplicateQuotation()">📄 Duplicar</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="btnTestMode" onclick="openTestCopy()" title="Abre una copia de prueba con lo que tienes en pantalla. No guarda ni cambia lo que ve el cliente.">🧪 Probar</button>
         <button type="button" class="btn btn-primary btn-sm" onclick="saveQuotation()">💾 Guardar</button>
       </div>
     </div>
@@ -814,6 +815,37 @@
       } finally {
         isSaving = false;
         buttons.forEach((btn, i) => { btn.disabled = false; btn.innerHTML = labels[i]; });
+      }
+    }
+
+    // Copia de prueba: usa los datos del editor (guardados o no) sin tocar la cotización real
+    async function openTestCopy() {
+      const data = collectData();
+      if (!data.plans || !data.plans.length) {
+        showToast('⚠️ La cotización debe tener al menos 1 plan.', 'error');
+        return;
+      }
+      if (editingId) data.original_id = editingId;
+      // Se abre la pestaña antes del fetch para que el navegador no la bloquee
+      const win = window.open('about:blank', '_blank');
+      try {
+        const resp = await fetch('/api/pruebas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        if (resp.status === 401) { if (win) win.close(); window.location.href = '/login'; return; }
+        const res = await resp.json().catch(() => ({}));
+        if (!resp.ok || res.status !== 'ok') {
+          if (win) win.close();
+          showToast('⚠️ ' + (res.detail || 'No se pudo crear la copia de prueba.'), 'error');
+          return;
+        }
+        if (win) win.location.href = res.url; else window.open(res.url, '_blank');
+        showToast('🧪 Copia de prueba abierta. El cliente no ve estos cambios.');
+      } catch (err) {
+        if (win) win.close();
+        showToast('⚠️ Error al crear la prueba: ' + err.message, 'error');
       }
     }
 

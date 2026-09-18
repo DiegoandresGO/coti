@@ -334,6 +334,11 @@
   </style>
 </head>
 <body>
+  {% if data.is_test %}
+  <div style="position: sticky; top: 0; z-index: 1000; background: repeating-linear-gradient(45deg, #F59E0B, #F59E0B 12px, #FBBF24 12px, #FBBF24 24px); color: #1F2937; text-align: center; padding: 8px 12px; font-size: 13px; font-weight: 800; letter-spacing: 0.02em;">
+    🧪 MODO PRUEBA · {{ data.quote_number }} — Nada de lo que hagas aquí se guarda en la cotización real ni lo ve el cliente.
+  </div>
+  {% endif %}
 
   <!-- BARRA SUPERIOR FIJA -->
   <header class="navbar client-navbar">

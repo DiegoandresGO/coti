@@ -179,6 +179,14 @@ def init_db():
                         pass
             _ensure_token_column(conn)
             conn.execute("CREATE TABLE IF NOT EXISTS app_state (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS quotation_tests (
+                    token       TEXT PRIMARY KEY,
+                    quote_id    TEXT NOT NULL,
+                    data        TEXT NOT NULL,
+                    created_at  TEXT NOT NULL
+                )
+            """)
         _initialized = True
 
 
@@ -245,6 +253,62 @@ def get_quotation_by_token(token: str):
     with _connect() as conn:
         row = conn.execute("SELECT id, data, access_token FROM quotations WHERE access_token = ?", (token,)).fetchone()
     return _row_to_data(row) if row else None
+
+
+# ==========================================
+# COPIAS DE PRUEBA (no afectan la cotización real)
+# ==========================================
+TEST_PREFIX = "prueba_"
+TEST_TTL_HOURS = 24
+
+
+def is_test_token(token: str) -> bool:
+    return str(token or "").startswith(TEST_PREFIX)
+
+
+def create_test_copy(quote_id: str, data: dict) -> str:
+    """Guarda una copia aislada de la cotización para pruebas del administrador.
+    Cada cotización tiene una sola copia de prueba: la nueva reemplaza la anterior."""
+    init_db()
+    quote_id = str(quote_id or data.get("quote_number") or "BORRADOR").strip()
+    token = TEST_PREFIX + secrets.token_urlsafe(16)
+    data = dict(data)
+    data.pop("client_requests", None)
+    data.pop("client_selected_at", None)
+    limit = datetime.fromtimestamp(datetime.now().timestamp() - TEST_TTL_HOURS * 3600).isoformat(timespec="seconds")
+    with _lock, _connect() as conn:
+        conn.execute("DELETE FROM quotation_tests WHERE quote_id = ? OR created_at < ?", (quote_id, limit))
+        conn.execute("INSERT INTO quotation_tests (token, quote_id, data, created_at) VALUES (?, ?, ?, ?)",
+                     (token, quote_id, _clean_for_storage(data), _now()))
+    return token
+
+
+def get_test_copy(token: str):
+    init_db()
+    with _connect() as conn:
+        row = conn.execute("SELECT token, quote_id, data FROM quotation_tests WHERE token = ?",
+                           (str(token or ""),)).fetchone()
+    if not row:
+        return None
+    data = json.loads(row["data"])
+    data["quote_number"] = row["quote_id"]
+    data["access_token"] = row["token"]
+    data["is_test"] = True
+    return data
+
+
+def update_test_copy(token: str, data: dict):
+    """Las acciones simuladas del cliente solo modifican la copia de prueba."""
+    init_db()
+    with _lock, _connect() as conn:
+        conn.execute("UPDATE quotation_tests SET data = ? WHERE token = ?",
+                     (_clean_for_storage({k: v for k, v in data.items() if k != "is_test"}), token))
+
+
+def delete_test_copies(quote_id: str):
+    init_db()
+    with _lock, _connect() as conn:
+        conn.execute("DELETE FROM quotation_tests WHERE quote_id = ?", (str(quote_id or "").strip(),))
 
 
 def regenerate_access_token(quote_id: str):

@@ -335,7 +335,13 @@ PRIVATE_HEADERS = {
 }
 
 
-def _quote_by_token_or_404(token: str) -> dict:
+def _quote_by_token_or_404(token: str, request: Request = None) -> dict:
+    # Las copias de prueba solo las ve el administrador con sesión activa
+    if storage.is_test_token(token):
+        data = storage.get_test_copy(token) if request and is_admin_authenticated(request) else None
+        if not data:
+            raise HTTPException(status_code=404, detail="Copia de prueba no disponible")
+        return data
     data = storage.get_quotation_by_token(token)
     if not data:
         raise HTTPException(status_code=404, detail="Enlace no válido o cotización no disponible")
@@ -348,7 +354,7 @@ async def client_view(request: Request, token: str):
     Portal del cliente. Solo se accede con el código secreto del enlace;
     el número de cotización por sí solo no da acceso.
     """
-    data = _quote_by_token_or_404(token)
+    data = _quote_by_token_or_404(token, request)
     response = templates.TemplateResponse(request, "client_view.html", {"data": data})
     response.headers.update(PRIVATE_HEADERS)
     return response
@@ -409,7 +415,26 @@ async def delete_quote(request: Request, quote_id: str):
         raise HTTPException(status_code=401, detail="No autorizado")
     if not storage.delete_quotation(quote_id):
         raise HTTPException(status_code=404, detail="Cotización no encontrada")
+    storage.delete_test_copies(quote_id)
     return {"status": "ok"}
+
+
+@app.post("/api/pruebas")
+async def create_test(request: Request, payload: dict):
+    """Crea una copia de prueba con los datos actuales del editor (requiere admin).
+    No guarda ni modifica la cotización real ni el enlace del cliente."""
+    if not is_admin_authenticated(request):
+        raise HTTPException(status_code=401, detail="No autorizado")
+    plans = payload.get("plans") or []
+    if not plans:
+        raise HTTPException(status_code=400, detail="La cotización debe tener al menos 1 plan.")
+    quote_id = str(payload.pop("original_id", "") or payload.get("quote_number") or "").strip()
+    payload.pop("access_token", None)
+    sel = payload.get("selected_plan_index")
+    if not isinstance(sel, int) or not 0 <= sel < len(plans):
+        payload["selected_plan_index"] = next((i for i, p in enumerate(plans) if p.get("is_recommended")), 0)
+    token = storage.create_test_copy(quote_id, payload)
+    return {"status": "ok", "url": f"/c/{token}"}
 
 
 @app.get("/api/cotizaciones/{quote_id}")
@@ -492,13 +517,19 @@ async def regenerate_link(request: Request, quote_id: str):
 
 
 @app.post("/c/{token}/select-plan")
-async def select_plan(token: str, payload: dict):
+async def select_plan(request: Request, token: str, payload: dict):
     """El cliente (con enlace válido) elige su plan preferido."""
-    data = _quote_by_token_or_404(token)
+    data = _quote_by_token_or_404(token, request)
     try:
         plan_index = int(payload.get("plan_index", 0))
     except (TypeError, ValueError):
         plan_index = -1
+    if data.get("is_test"):
+        if not 0 <= plan_index < len(data.get("plans") or []):
+            return {"status": "error", "message": "Índice de plan inválido"}
+        data["selected_plan_index"] = plan_index
+        storage.update_test_copy(token, data)
+        return {"status": "ok", "selected_plan_index": plan_index, "test": True}
     if storage.set_selected_plan(data["quote_number"], plan_index):
         return {"status": "ok", "selected_plan_index": plan_index}
     return {"status": "error", "message": "Índice de plan inválido"}
@@ -531,9 +562,9 @@ def _whatsapp_url(data: dict, plan_index, kind: str, message: str) -> str:
 
 
 @app.post("/c/{token}/solicitud")
-async def client_request(token: str, payload: dict):
+async def client_request(request: Request, token: str, payload: dict):
     """El cliente confirma un plan o pide modificaciones; se registra y se arma el enlace de WhatsApp."""
-    data = _quote_by_token_or_404(token)
+    data = _quote_by_token_or_404(token, request)
     kind = "modificacion" if payload.get("kind") == "modificacion" else "aceptacion"
     try:
         plan_index = int(payload.get("plan_index"))
@@ -546,10 +577,16 @@ async def client_request(token: str, payload: dict):
     if kind == "modificacion" and not message:
         raise HTTPException(status_code=400, detail="Describe los cambios que necesitas en la cotización.")
 
-    if kind == "aceptacion" and plan_index is not None:
-        storage.set_selected_plan(data["quote_number"], plan_index)
-        data["selected_plan_index"] = plan_index
-    storage.add_client_request(data["quote_number"], kind, plan_index, message)
+    if data.get("is_test"):
+        # Simulación: no se registra la solicitud en la cotización real
+        if kind == "aceptacion" and plan_index is not None:
+            data["selected_plan_index"] = plan_index
+            storage.update_test_copy(token, data)
+    else:
+        if kind == "aceptacion" and plan_index is not None:
+            storage.set_selected_plan(data["quote_number"], plan_index)
+            data["selected_plan_index"] = plan_index
+        storage.add_client_request(data["quote_number"], kind, plan_index, message)
     whatsapp_url = _whatsapp_url(data, plan_index, kind, message) if kind == "modificacion" else None
     return {
         "status": "ok",
@@ -594,9 +631,9 @@ def _pdf_response(data: dict, plan_index):
 
 
 @app.get("/c/{token}/pdf")
-async def client_pdf(token: str, plan_index: int = None):
+async def client_pdf(request: Request, token: str, plan_index: int = None):
     """PDF para el cliente con enlace válido."""
-    return _pdf_response(_quote_by_token_or_404(token), plan_index)
+    return _pdf_response(_quote_by_token_or_404(token, request), plan_index)
 
 
 @app.get("/api/cotizaciones/{quote_id}/pdf")
