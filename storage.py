@@ -24,7 +24,8 @@ DEFAULT_PROPOSAL = {
     "company_whatsapp": "+57 300 123 4567",
     "client_name": "Carlos Rodríguez",
     "client_company": "Inversiones & Finanzas S.A.S",
-    "client_contact": "carlos.rodriguez@inversiones.com | +57 310 987 6543",
+    "client_email": "carlos.rodriguez@inversiones.com",
+    "client_contact": "+57 310 987 6543",
     "project_title": "MyFinces — Control de Finanzas Personales",
     "project_category": "Ecosistema Web & Aplicación Móvil APK",
     "project_description": (

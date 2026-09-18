@@ -345,7 +345,10 @@ _email_attempts = {}  # token -> [momentos de intentos fallidos]
 
 
 def quote_emails(data: dict) -> set:
-    """Correos registrados en el contacto del cliente de la cotización."""
+    """Correo del cliente de la cotización. Las cotizaciones antiguas lo traen dentro del contacto."""
+    email = str(data.get("client_email") or "").strip().lower()
+    if email:
+        return {email}
     return {e.lower() for e in EMAIL_RE.findall(str(data.get("client_contact") or ""))}
 
 
@@ -489,6 +492,7 @@ async def new_quote_template(request: Request):
         "quote_date": datetime.today().strftime("%d/%m/%Y"),
         "client_name": "",
         "client_company": "",
+        "client_email": "",
         "client_contact": "",
     })
     data.pop("selected_plan_index", None)

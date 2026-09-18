@@ -840,6 +840,10 @@
       document.getElementById('modalCambios').hidden = true;
     }
 
+    function escapeHtmlText(v) {
+      return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
     function abrirModalAceptada() {
       const plan = (quoteData.plans || [])[currentSelectedIndex] || {};
       document.getElementById('modalAceptadaPlan').textContent = plan.num ? (plan.num + ' — ' + plan.name) : 'plan seleccionado';
@@ -892,7 +896,7 @@
             <a href="${pdfUrl}" target="_blank" class="btn btn-primary btn-sm">
               📥 Descargar Propuesta Oficial en PDF
             </a>
-            <span class="contract-hint">Nos comunicaremos a ${quoteData.client_contact || 'tus canales de contacto'} para el envío de la minuta contractual.</span>
+            <span class="contract-hint">Nos comunicaremos a ${escapeHtmlText([quoteData.client_email, quoteData.client_contact].filter(Boolean).join(' | ') || 'tus canales de contacto')} para el envío de la minuta contractual.</span>
           </div>
         </div>
       `;

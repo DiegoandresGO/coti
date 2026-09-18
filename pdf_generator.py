@@ -218,7 +218,10 @@ def generate_quotation_pdf(data):
     
     client_name = data.get("client_name", "Cliente")
     client_company = data.get("client_company", "Empresa Cliente")
-    client_contact = data.get("client_contact", "cliente@empresa.com")
+    client_email = str(data.get("client_email") or "").strip()
+    client_contact = str(data.get("client_contact") or "").strip()
+    if client_email and client_email.lower() not in client_contact.lower():
+        client_contact = " | ".join(p for p in (client_email, client_contact) if p)
     
     left_header = [
         Paragraph("PROPUESTA COMERCIAL & TÉCNICA", doc_supertitle),

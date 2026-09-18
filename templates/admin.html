@@ -414,9 +414,13 @@
               <input type="text" id="client_company" class="form-control">
             </div>
             <div class="form-group">
-              <label class="form-label">Contacto del Cliente (Email / Tel)</label>
-              <input type="text" id="client_contact" class="form-control">
+              <label class="form-label" for="client_email">Correo del Cliente</label>
+              <input type="email" id="client_email" class="form-control" placeholder="cliente@empresa.com" autocomplete="off">
               <div style="font-size: 12px; color: var(--slate-500); margin-top: 4px;">🔒 El cliente deberá escribir este correo para abrir su enlace. Sin correo, el enlace abre directo.</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="client_contact">Teléfono / Otro contacto</label>
+              <input type="text" id="client_contact" class="form-control" placeholder="+57 300 000 0000">
             </div>
             <div class="grid-2">
               <div class="form-group">
@@ -509,8 +513,19 @@
       
       document.getElementById('client_name').value = data.client_name || '';
       document.getElementById('client_company').value = data.client_company || '';
-      document.getElementById('client_contact').value = data.client_contact || '';
-      
+      // Cotizaciones antiguas traen el correo dentro del contacto: se separa en su propio campo
+      let clientEmail = data.client_email || '';
+      let clientContact = data.client_contact || '';
+      if (!clientEmail) {
+        const m = clientContact.match(/[\w.+-]+@[\w-]+(?:\.[\w-]+)+/);
+        if (m) {
+          clientEmail = m[0];
+          clientContact = clientContact.replace(m[0], '').replace(/^[\s|,;\/-]+|[\s|,;\/-]+$/g, '');
+        }
+      }
+      document.getElementById('client_email').value = clientEmail;
+      document.getElementById('client_contact').value = clientContact;
+
       document.getElementById('project_title').value = data.project_title || '';
       document.getElementById('project_category').value = data.project_category || '';
       document.getElementById('project_description').value = data.project_description || '';
@@ -722,6 +737,7 @@
 
         client_name: document.getElementById('client_name').value,
         client_company: document.getElementById('client_company').value,
+        client_email: document.getElementById('client_email').value.trim(),
         client_contact: document.getElementById('client_contact').value,
 
         project_title: document.getElementById('project_title').value,
@@ -788,6 +804,12 @@
         const data = collectData();
         if (!data.plans || !data.plans.length) {
           showToast('⚠️ La cotización debe tener al menos 1 plan.', 'error');
+          return;
+        }
+        if (data.client_email && !/^[\w.+-]+@[\w-]+(\.[\w-]+)+$/.test(data.client_email)) {
+          showToast('⚠️ El correo del cliente no es válido.', 'error');
+          switchTab('tabMeta');
+          document.getElementById('client_email').focus();
           return;
         }
         const resp = await fetch('/api/cotizaciones', {
