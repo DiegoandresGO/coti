@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/svg+xml" href="/static/img/icon.svg">
+  <meta name="theme-color" content="#4F46E5">
+  <title>Acceso a tu propuesta</title>
+  <link rel="stylesheet" href="/static/css/style.css?v=9">
+  <script src="/static/js/theme.js"></script>
+  <style>
+    :root {
+      --gt-bg: radial-gradient(circle at top, #EEF2FF 0%, #F8FAFC 55%, #E2E8F0 100%);
+      --gt-card: rgba(255, 255, 255, 0.9);
+      --gt-border: rgba(99, 102, 241, 0.22);
+      --gt-title: #0F172A;
+      --gt-text: #64748B;
+      --gt-input-bg: #FFFFFF;
+      --gt-input-border: #CBD5E1;
+      --gt-error-bg: #FFF1F2; --gt-error-border: #FECDD3; --gt-error-text: #BE123C;
+    }
+    [data-theme="dark"] {
+      --gt-bg: radial-gradient(circle at top, #111827 0%, #0B0F19 100%);
+      --gt-card: rgba(17, 24, 39, 0.85);
+      --gt-border: rgba(99, 102, 241, 0.3);
+      --gt-title: #FFFFFF;
+      --gt-text: #94A3B8;
+      --gt-input-bg: rgba(15, 23, 42, 0.8);
+      --gt-input-border: rgba(255, 255, 255, 0.12);
+      --gt-error-bg: rgba(244, 63, 94, 0.15); --gt-error-border: rgba(244, 63, 94, 0.4); --gt-error-text: #FECDD3;
+    }
+    body {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: var(--gt-bg); background-color: var(--page-bg); padding: 20px; color: var(--gt-title);
+    }
+    .gate-toggle { position: fixed; top: 16px; right: 16px; z-index: 5; }
+    .gate-card {
+      width: 100%; max-width: 440px; background: var(--gt-card); backdrop-filter: blur(16px);
+      border: 1px solid var(--gt-border); border-radius: var(--radius-lg); padding: 36px 32px;
+      box-shadow: 0 20px 40px rgba(15, 23, 42, 0.10), 0 0 35px -5px rgba(79, 70, 229, 0.18);
+    }
+    .gate-header { text-align: center; margin-bottom: 24px; }
+    .gate-title { font-size: 21px; font-weight: 800; letter-spacing: -0.02em; }
+    .gate-sub { font-size: 13.5px; color: var(--gt-text); margin-top: 8px; line-height: 1.5; }
+    .gate-label { display: block; font-size: 12.5px; font-weight: 700; margin-bottom: 8px; }
+    .gate-input {
+      width: 100%; background: var(--gt-input-bg); border: 1.5px solid var(--gt-input-border);
+      border-radius: var(--radius-sm); padding: 12px 14px; font-size: 14px; color: var(--gt-title);
+      outline: none; font-family: inherit;
+    }
+    .gate-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.25); }
+    .gate-btn {
+      width: 100%; padding: 13px; margin-top: 16px; background: linear-gradient(135deg, #4F46E5 0%, #4338CA 100%);
+      color: #FFFFFF; border: none; border-radius: var(--radius-sm); font-size: 14.5px; font-weight: 700;
+      cursor: pointer; box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4);
+    }
+    .gate-error {
+      background: var(--gt-error-bg); border: 1px solid var(--gt-error-border); color: var(--gt-error-text);
+      padding: 10px 14px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 18px;
+    }
+    .gate-note { margin-top: 20px; font-size: 12px; color: var(--gt-text); text-align: center; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <button type="button" class="theme-toggle gate-toggle" onclick="toggleTheme()" aria-label="Cambiar entre modo claro y oscuro" title="Modo claro / oscuro"><span class="theme-knob"></span></button>
+
+  <div class="gate-card">
+    <div class="gate-header">
+      <img src="/static/img/icon.svg" alt="" width="60" height="60" style="display: block; margin: 0 auto 14px; filter: drop-shadow(0 8px 20px rgba(79, 70, 229, 0.45));">
+      <h1 class="gate-title">🔒 Verifica tu acceso</h1>
+      <p class="gate-sub">
+        Para ver la propuesta comercial, ingresa el correo electrónico al que fue enviada esta cotización.
+      </p>
+    </div>
+
+    {% if error %}
+    <div class="gate-error">⚠️ {{ error }}</div>
+    {% endif %}
+
+    <form action="/c/{{ token }}/acceso" method="POST">
+      <label class="gate-label" for="email">Correo electrónico</label>
+      <input type="email" id="email" name="email" class="gate-input" placeholder="tucorreo@empresa.com"
+             value="{{ email|default('') }}" required autofocus autocomplete="email" maxlength="200"
+             {% if blocked %}disabled{% endif %}>
+      <button type="submit" class="gate-btn" {% if blocked %}disabled style="opacity: 0.6; cursor: not-allowed;"{% endif %}>Ver mi propuesta</button>
+    </form>
+
+    <p class="gate-note">
+      ¿No recuerdas el correo? Comunícate con quien te envió la propuesta.
+    </p>
+  </div>
+</body>
+</html>

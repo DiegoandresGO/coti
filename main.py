@@ -1,4 +1,5 @@
 import os
+import re
 import unicodedata
 from urllib.parse import quote, unquote
 import hmac
@@ -335,6 +336,61 @@ PRIVATE_HEADERS = {
 }
 
 
+# ----- Verificación por correo del cliente -----
+EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
+ACCESS_COOKIE_DAYS = 30
+MAX_EMAIL_ATTEMPTS = 5
+EMAIL_ATTEMPT_WINDOW = 15 * 60
+_email_attempts = {}  # token -> [momentos de intentos fallidos]
+
+
+def quote_emails(data: dict) -> set:
+    """Correos registrados en el contacto del cliente de la cotización."""
+    return {e.lower() for e in EMAIL_RE.findall(str(data.get("client_contact") or ""))}
+
+
+def _access_cookie_name(token: str) -> str:
+    return "cv_" + hashlib.sha256(token.encode()).hexdigest()[:16]
+
+
+def _access_signature(token: str, emails: set) -> str:
+    # Si el administrador cambia el correo, los accesos anteriores dejan de valer
+    payload = f"{token}|{','.join(sorted(emails))}"
+    return hmac.new(SECRET_KEY.encode(), payload.encode(), hashlib.sha256).hexdigest()
+
+
+def client_has_access(request: Request, token: str, data: dict) -> bool:
+    if data.get("is_test") or is_admin_authenticated(request):
+        return True
+    emails = quote_emails(data)
+    if not emails:
+        return True  # Cotización sin correo registrado: se mantiene el acceso solo con enlace
+    cookie = request.cookies.get(_access_cookie_name(token)) or ""
+    return hmac.compare_digest(cookie, _access_signature(token, emails))
+
+
+def _require_client_access(request: Request, token: str) -> dict:
+    data = _quote_by_token_or_404(token, request)
+    if not client_has_access(request, token, data):
+        raise HTTPException(status_code=403, detail="Verifica tu correo para acceder a esta propuesta.")
+    return data
+
+
+def _attempts_blocked(token: str) -> bool:
+    now = time.time()
+    recent = [t for t in _email_attempts.get(token, []) if now - t < EMAIL_ATTEMPT_WINDOW]
+    _email_attempts[token] = recent
+    return len(recent) >= MAX_EMAIL_ATTEMPTS
+
+
+def _gate_response(request: Request, token: str, error=None, email="", blocked=False, status_code=200):
+    response = templates.TemplateResponse(request, "client_gate.html", {
+        "token": token, "error": error, "email": email, "blocked": blocked,
+    }, status_code=status_code)
+    response.headers.update(PRIVATE_HEADERS)
+    return response
+
+
 def _quote_by_token_or_404(token: str, request: Request = None) -> dict:
     # Las copias de prueba solo las ve el administrador con sesión activa
     if storage.is_test_token(token):
@@ -355,8 +411,39 @@ async def client_view(request: Request, token: str):
     el número de cotización por sí solo no da acceso.
     """
     data = _quote_by_token_or_404(token, request)
+    if not client_has_access(request, token, data):
+        return _gate_response(request, token)
     response = templates.TemplateResponse(request, "client_view.html", {"data": data})
     response.headers.update(PRIVATE_HEADERS)
+    return response
+
+
+@app.post("/c/{token}/acceso")
+async def client_access(request: Request, token: str):
+    """El cliente confirma el correo de la cotización para abrir su propuesta."""
+    data = _quote_by_token_or_404(token, request)
+    form = await request.form()
+    email = str(form.get("email", "")).strip()[:200]
+    if _attempts_blocked(token):
+        return _gate_response(request, token, email=email, blocked=True, status_code=429,
+                              error="Demasiados intentos. Espera unos minutos e inténtalo de nuevo.")
+    emails = quote_emails(data)
+    if emails and email.lower() not in emails:
+        _email_attempts.setdefault(token, []).append(time.time())
+        return _gate_response(request, token, email=email, status_code=401,
+                              error="El correo no coincide con el registrado en esta cotización.")
+    _email_attempts.pop(token, None)
+    response = RedirectResponse(url=f"/c/{token}", status_code=303)
+    if emails:
+        response.set_cookie(
+            key=_access_cookie_name(token),
+            value=_access_signature(token, emails),
+            max_age=ACCESS_COOKIE_DAYS * 24 * 3600,
+            path=f"/c/{token}",
+            httponly=True,
+            samesite="lax",
+            secure=_cookie_secure(),
+        )
     return response
 
 
@@ -524,7 +611,7 @@ async def regenerate_link(request: Request, quote_id: str):
 @app.post("/c/{token}/select-plan")
 async def select_plan(request: Request, token: str, payload: dict):
     """El cliente (con enlace válido) elige su plan preferido."""
-    data = _quote_by_token_or_404(token, request)
+    data = _require_client_access(request, token)
     try:
         plan_index = int(payload.get("plan_index", 0))
     except (TypeError, ValueError):
@@ -572,7 +659,7 @@ def _whatsapp_url(data: dict, plan_index, kind: str, message: str) -> str:
 @app.post("/c/{token}/solicitud")
 async def client_request(request: Request, token: str, payload: dict):
     """El cliente confirma un plan o pide modificaciones; se registra y se arma el enlace de WhatsApp."""
-    data = _quote_by_token_or_404(token, request)
+    data = _require_client_access(request, token)
     kind = "modificacion" if payload.get("kind") == "modificacion" else "aceptacion"
     try:
         plan_index = int(payload.get("plan_index"))
@@ -649,7 +736,10 @@ def _pdf_response(data: dict, plan_index):
 @app.get("/c/{token}/pdf")
 async def client_pdf(request: Request, token: str, plan_index: int = None):
     """PDF para el cliente con enlace válido."""
-    return _pdf_response(_quote_by_token_or_404(token, request), plan_index)
+    data = _quote_by_token_or_404(token, request)
+    if not client_has_access(request, token, data):
+        return RedirectResponse(url=f"/c/{token}", status_code=303)
+    return _pdf_response(data, plan_index)
 
 
 @app.get("/api/cotizaciones/{quote_id}/pdf")
