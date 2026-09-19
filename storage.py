@@ -106,8 +106,9 @@ DEFAULT_PROPOSAL = {
         "Documentación Faltante: Requerimientos no contemplados en esta cotización se liquidarán bajo la bolsa de horas de desarrollo.",
         "Garantía Técnica: 30 días calendario de soporte y resolución de bugs sin costo tras la entrega formal."
     ],
-    "tax_type": "Valor Neto (Persona Natural / No Responsable de IVA)",
-    "tax_rate": 0.0,
+    "tax_type": "IVA Régimen Común (19%)",
+    "tax_rate": 19.0,
+    "price_includes_tax": False,
     "rete_fuente_enabled": False,
     "rete_fuente_pct": 11.0,
     "rete_iva_enabled": False,
@@ -502,8 +503,36 @@ def plan_items(features) -> list:
     return [i.strip(" \t-•✔") for i in items if i.strip(" \t-•✔")]
 
 
+def plan_tax_details(plan_price: float, tax_rate: float, *args, **kwargs) -> dict:
+    """Calcula el desglose tributario: los valores de los planes siempre son netos y se les suma el IVA."""
+    try:
+        price = float(plan_price or 0)
+        rate = float(tax_rate or 0)
+    except (TypeError, ValueError):
+        price, rate = 0.0, 0.0
+
+    if rate <= 0:
+        return {
+            "rate": 0.0,
+            "base": price,
+            "iva": 0.0,
+            "total": price,
+            "has_tax": False
+        }
+
+    iva = round(price * (rate / 100.0), 2)
+    total = round(price + iva, 2)
+    return {
+        "rate": rate,
+        "base": price,
+        "iva": iva,
+        "total": total,
+        "has_tax": True
+    }
+
+
 def compute_totals(data: dict, base_val: float) -> dict:
-    """Subtotal -> IVA -> Total factura -> Retenciones -> Neto a pagar."""
+    """Subtotal (neto) -> IVA -> Total factura -> Retenciones -> Neto a pagar."""
     def f(key, default=0.0):
         try:
             return float(data.get(key, default) or 0)
@@ -511,14 +540,15 @@ def compute_totals(data: dict, base_val: float) -> dict:
             return 0.0
 
     tax_rate = f("tax_rate")
-    iva = base_val * tax_rate / 100.0
-    total = base_val + iva
+    base = float(base_val or 0)
+    iva = round(base * tax_rate / 100.0, 2)
+    total = round(base + iva, 2)
 
     retentions = []
     if data.get("rete_fuente_enabled") and f("rete_fuente_pct") > 0:
         pct = f("rete_fuente_pct")
         retentions.append({"key": "fuente", "label": f"Retención en la Fuente ({pct:g}%)",
-                           "desc": "Sobre el subtotal antes de IVA", "value": base_val * pct / 100.0})
+                           "desc": "Sobre el subtotal antes de IVA", "value": base * pct / 100.0})
     if data.get("rete_iva_enabled") and f("rete_iva_pct") > 0 and iva > 0:
         pct = f("rete_iva_pct")
         retentions.append({"key": "iva", "label": f"ReteIVA ({pct:g}% del IVA)",
@@ -526,10 +556,10 @@ def compute_totals(data: dict, base_val: float) -> dict:
     if data.get("rete_ica_enabled") and f("rete_ica_pm") > 0:
         pm = f("rete_ica_pm")
         retentions.append({"key": "ica", "label": f"ReteICA ({pm:g} por mil)",
-                           "desc": "Sobre el subtotal antes de IVA", "value": base_val * pm / 1000.0})
+                           "desc": "Sobre el subtotal antes de IVA", "value": base * pm / 1000.0})
 
     total_ret = sum(r["value"] for r in retentions)
-    return {"base": base_val, "iva": iva, "total": total, "retentions": retentions,
+    return {"base": base, "iva": iva, "total": total, "retentions": retentions,
             "total_retentions": total_ret, "neto": total - total_ret}
 
 

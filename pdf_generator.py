@@ -409,16 +409,36 @@ def generate_quotation_pdf(data):
         Paragraph("Alcance y Entregables del Plan", table_header_style)
     ]]
     
+    tax_rate = data.get("tax_rate", 0.0)
+    price_inc = data.get("price_includes_tax", False)
     for p in plans:
         is_rec = p.get("is_recommended", False)
         badge_text = "<font color='#4F46E5'><b>★ RECOMENDADO</b></font><br/>" if is_rec else ""
         hours_val = p.get('support_hours', 'Incluido')
         if "incluidas" not in str(hours_val).lower() and "incluido" not in str(hours_val).lower():
             hours_val = f"{hours_val} incluidas"
+
+        price_val = p.get('price', 0)
+        tinfo = storage.plan_tax_details(price_val, tax_rate, price_inc)
+        if tinfo["has_tax"]:
+            if tinfo["includes_tax"]:
+                price_cell = (
+                    f"<b>{format_currency(tinfo['total'])}</b><br/>"
+                    f"<font size=7.5 color='#059669'><b>✔ Incluye IVA ({tinfo['rate']:g}%):</b><br/>{format_currency(tinfo['iva'])}</font><br/>"
+                    f"<font size=7 color='#64748B'>Base: {format_currency(tinfo['base'])}</font>"
+                )
+            else:
+                price_cell = (
+                    f"<b>{format_currency(tinfo['base'])}</b><br/>"
+                    f"<font size=7.5 color='#4F46E5'><b>+ IVA ({tinfo['rate']:g}%):</b><br/>{format_currency(tinfo['iva'])}</font><br/>"
+                    f"<font size=7 color='#64748B'>Total: {format_currency(tinfo['total'])}</font>"
+                )
+        else:
+            price_cell = f"<b>{format_currency(price_val)}</b><br/><font size=7.5 color='#64748B'>Valor Neto</font>"
             
         plans_table_data.append([
             Paragraph(f"{badge_text}<b>{p['num']}</b><br/><font color='#64748B'>{p['name']}</font>", table_cell_style),
-            Paragraph(f"<b>{format_currency(p['price'])}</b>", ParagraphStyle('PVal', parent=table_cell_bold, textColor=PRIMARY_BRAND)),
+            Paragraph(price_cell, ParagraphStyle('PVal', parent=table_cell_style, leading=9.5)),
             Paragraph(f"<b>{hours_val}</b><br/><font color='#64748B' size=7.5>Sin cobro mensual</font>", table_cell_style),
             Paragraph("<br/>".join(f"• {escape(i)}" for i in storage.plan_items(p.get('features'))), table_cell_style)
         ])
@@ -547,11 +567,13 @@ def generate_quotation_pdf(data):
     
     tax_type = data.get("tax_type", "Valor Neto (Persona Natural / No Responsable de IVA)")
     tax_rate = data.get("tax_rate", 0.0)
-    base_val = float(sel_plan.get("price", 4000000))
-    totals = storage.compute_totals(data, base_val)
+    raw_plan_price = float(sel_plan.get("price", 4000000))
+    totals = storage.compute_totals(data, raw_plan_price)
+    base_val = totals["base"]
     tax_val = totals["iva"]
     total_val = totals["total"]
     retentions = totals["retentions"]
+    price_includes_tax = totals.get("price_includes_tax", False)
     
     adv_p = data.get("adv_pct", 50)
     mid_p = data.get("mid_pct", 30)
@@ -583,9 +605,10 @@ def generate_quotation_pdf(data):
         Paragraph(f"<b>{format_currency(base_val)}</b>", table_cell_bold)
     ])
     if tax_rate > 0:
+        iva_desc = "IVA incluido en el precio del plan" if price_includes_tax else "Impuesto adicional sobre subtotal"
         pay_rows.append([
             Paragraph(f"<b>IVA ({tax_rate}%):</b>", table_cell_style),
-            Paragraph("", table_cell_style),
+            Paragraph(iva_desc, table_cell_style),
             Paragraph(f"{format_currency(tax_val)}", table_cell_style)
         ])
     pay_rows.append([

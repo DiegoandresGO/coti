@@ -447,6 +447,20 @@
 
             <div class="plan-name">{{ p.name }}</div>
             <div class="plan-price">$ {{ "{:,.0f}".format(p.price|float).replace(",", ".") }} COP</div>
+            {% set tinfo = plan_tax_details(p.price, data.tax_rate, data.price_includes_tax) %}
+            <div class="plan-tax-box">
+              {% if tinfo.has_tax %}
+                {% if tinfo.includes_tax %}
+                <span class="plan-tax-badge badge-included">✔ Incluye IVA ({{ tinfo.rate|int if tinfo.rate == tinfo.rate|int else tinfo.rate }}%): $ {{ "{:,.0f}".format(tinfo.iva).replace(",", ".") }} COP</span>
+                <span class="plan-tax-subnote">Subtotal antes de IVA: $ {{ "{:,.0f}".format(tinfo.base).replace(",", ".") }} COP</span>
+                {% else %}
+                <span class="plan-tax-badge badge-plus">+ IVA ({{ tinfo.rate|int if tinfo.rate == tinfo.rate|int else tinfo.rate }}%): $ {{ "{:,.0f}".format(tinfo.iva).replace(",", ".") }} COP</span>
+                <span class="plan-tax-subnote">Total con IVA: $ {{ "{:,.0f}".format(tinfo.total).replace(",", ".") }} COP</span>
+                {% endif %}
+              {% else %}
+                <span class="plan-tax-badge badge-neto">Valor Neto (No responsable de IVA)</span>
+              {% endif %}
+            </div>
             <div class="plan-support">✨ {{ p.support_hours }} de soporte incluidas</div>
           </div>
 
@@ -473,7 +487,8 @@
           </div>
           <div style="text-align: right;">
             <div id="detailPlanPrice" style="font-size: 24px; font-weight: 800; color: var(--primary);">$ 4.000.000 COP</div>
-            <div style="font-size: 12px; color: var(--slate-500);">Valor total de desarrollo</div>
+            <div id="detailPlanTax" style="font-size: 12.5px; font-weight: 600; color: var(--slate-600); margin-top: 3px;"></div>
+            <div style="font-size: 12px; color: var(--slate-500); margin-top: 1px;">Valor total de desarrollo</div>
           </div>
         </div>
 
@@ -635,7 +650,7 @@
             {% if data.tax_rate|float > 0 %}
             <tr id="rowIva">
               <td><strong>IVA ({{ data.tax_rate }}%)</strong></td>
-              <td>Régimen de impuestos aplicable</td>
+              <td id="rowIvaDesc">{% if data.price_includes_tax %}IVA incluido en el precio del plan{% else %}Impuesto adicional sobre subtotal{% endif %}</td>
               <td id="rowIvaVal">$ 0 COP</td>
             </tr>
             {% endif %}
@@ -1021,14 +1036,44 @@
         .map(i => i.replace(/^[\s\-•✔]+|\s+$/g, '')).filter(Boolean)
         .forEach(item => { const li = document.createElement('li'); li.textContent = item; descList.appendChild(li); });
 
-      // 3. Recalcular Sección 08 (Hitos de Pago)
-      const baseVal = parseFloat(plan.price) || 0;
+      // 3. Recalcular Sección 08 (Hitos de Pago) y Desglose Tributario
+      const planPrice = parseFloat(plan.price) || 0;
+      const taxRate = parseFloat(quoteData.tax_rate || 0);
+      const priceIncludesTax = !!quoteData.price_includes_tax;
+
+      let baseVal = planPrice;
+      let taxVal = 0;
+      let totalVal = planPrice;
+
+      if (taxRate > 0) {
+        if (priceIncludesTax) {
+          totalVal = planPrice;
+          baseVal = Math.round(totalVal / (1.0 + (taxRate / 100.0)));
+          taxVal = totalVal - baseVal;
+        } else {
+          baseVal = planPrice;
+          taxVal = Math.round(baseVal * (taxRate / 100.0));
+          totalVal = baseVal + taxVal;
+        }
+      }
+
+      // Actualizar detalle de impuesto en la tarjeta de desglose específico
+      const detailTax = document.getElementById('detailPlanTax');
+      if (detailTax) {
+        if (taxRate > 0) {
+          if (priceIncludesTax) {
+            detailTax.innerHTML = `<span style="color: #059669;">✔ Incluye IVA (${taxRate}%): ${formatCOP(taxVal)}</span> • Base: ${formatCOP(baseVal)}`;
+          } else {
+            detailTax.innerHTML = `<span style="color: var(--primary);">+ IVA (${taxRate}%): ${formatCOP(taxVal)}</span> • Total con IVA: ${formatCOP(totalVal)}`;
+          }
+        } else {
+          detailTax.innerHTML = `<span style="color: var(--slate-500);">Valor Neto (No responsable de IVA)</span>`;
+        }
+      }
+
       const advVal = baseVal * (parseFloat(quoteData.adv_pct || 50) / 100.0);
       const midVal = baseVal * (parseFloat(quoteData.mid_pct || 30) / 100.0);
       const finVal = baseVal * (parseFloat(quoteData.fin_pct || 20) / 100.0);
-      const taxRate = parseFloat(quoteData.tax_rate || 0);
-      const taxVal = baseVal * (taxRate / 100.0);
-      const totalVal = baseVal + taxVal;
 
       // Retenciones (se descuentan del total de la factura)
       const retentions = [];

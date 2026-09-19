@@ -321,6 +321,14 @@
                 <option value="iva19">IVA Régimen Común (19%)</option>
               </select>
             </div>
+            <div class="form-group" id="tax_mode_group" style="display: none;">
+              <label class="form-label">Modalidad de Precios con IVA</label>
+              <select id="price_includes_tax" class="form-control">
+                <option value="false">Precios antes de IVA (+ IVA 19% adicional)</option>
+                <option value="true">Precios con IVA ya incluido (El valor del plan es el total final)</option>
+              </select>
+              <small style="color: var(--slate-500);">Define si el valor ingresado en cada plan ya contiene el IVA o si se le sumará encima.</small>
+            </div>
           </div>
 
           <div style="margin-top: 10px; padding: 14px 16px; border: 1px solid var(--slate-200); border-radius: var(--radius-sm); background: var(--slate-50);">
@@ -552,6 +560,7 @@
       } else {
         document.getElementById('tax_type_select').value = 'neto';
       }
+      document.getElementById('price_includes_tax').value = data.price_includes_tax ? 'true' : 'false';
       document.getElementById('rete_fuente_enabled').checked = !!data.rete_fuente_enabled;
       document.getElementById('rete_fuente_pct').value = data.rete_fuente_pct ?? 11;
       document.getElementById('rete_iva_enabled').checked = !!data.rete_iva_enabled;
@@ -613,6 +622,8 @@
 
     function onTaxChange() {
       const hasIva = document.getElementById('tax_type_select').value === 'iva19';
+      const taxModeGroup = document.getElementById('tax_mode_group');
+      if (taxModeGroup) taxModeGroup.style.display = hasIva ? 'block' : 'none';
       const chk = document.getElementById('rete_iva_enabled');
       chk.disabled = !hasIva;
       if (!hasIva) chk.checked = false;
@@ -761,6 +772,7 @@
 
         tax_type: tax_type,
         tax_rate: tax_rate,
+        price_includes_tax: tax_type_val === 'iva19' && document.getElementById('price_includes_tax').value === 'true',
         rete_fuente_enabled: document.getElementById('rete_fuente_enabled').checked,
         rete_fuente_pct: parseFloat(document.getElementById('rete_fuente_pct').value) || 0,
         rete_iva_enabled: document.getElementById('rete_iva_enabled').checked,
