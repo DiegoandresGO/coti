@@ -549,18 +549,19 @@
               <strong id="detailPlanHours" style="color: var(--emerald-700); font-size: 13.5px;">Incluido</strong>
             </div>
           </div>
-          <div class="detail-pill-box">
+          {# Estas dos dependen del plan: se ocultan si el plan no las define #}
+          <div class="detail-pill-box" id="detailMobileBox" hidden>
             <div class="detail-icon">📱</div>
             <div>
               <div style="font-size: 11.5px; color: var(--slate-500); font-weight: 600;">App Móvil</div>
-              <strong style="color: var(--slate-800); font-size: 13.5px;">APK Android Instalador</strong>
+              <strong id="detailPlanMobile" style="color: var(--slate-800); font-size: 13.5px;"></strong>
             </div>
           </div>
-          <div class="detail-pill-box">
+          <div class="detail-pill-box" id="detailWarrantyBox" hidden>
             <div class="detail-icon">🛡️</div>
             <div>
               <div style="font-size: 11.5px; color: var(--slate-500); font-weight: 600;">Garantía Directa</div>
-              <strong style="color: var(--slate-800); font-size: 13.5px;">30 días de cobertura bugs</strong>
+              <strong id="detailPlanWarranty" style="color: var(--slate-800); font-size: 13.5px;"></strong>
             </div>
           </div>
         </div>
@@ -1125,6 +1126,17 @@
       document.getElementById('detailPlanTitle').textContent = plan.num + ' — ' + plan.name;
       document.getElementById('detailPlanPrice').textContent = formatCOP(plan.price);
       document.getElementById('detailPlanHours').textContent = 'Incluido';
+
+      // App móvil y garantía cambian según el plan; sin texto, la pastilla no se muestra
+      const pastilla = (boxId, valueId, texto) => {
+        const box = document.getElementById(boxId);
+        const val = document.getElementById(valueId);
+        const t = String(texto || '').trim();
+        val.textContent = t;
+        box.hidden = !t;
+      };
+      pastilla('detailMobileBox', 'detailPlanMobile', plan.mobile_scope);
+      pastilla('detailWarrantyBox', 'detailPlanWarranty', plan.warranty);
       const descList = document.getElementById('detailPlanDesc');
       descList.innerHTML = '';
       (Array.isArray(plan.features) ? plan.features

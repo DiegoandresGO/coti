@@ -687,8 +687,10 @@
         const price = parseFloat(card.querySelector('.plan-price-input').value) || 0;
         const support_hours = card.querySelector('.plan-support-input').value.trim();
         const features = card.querySelector('.plan-features-input').value.trim();
+        const mobile_scope = card.querySelector('.plan-mobile-input').value.trim();
+        const warranty = card.querySelector('.plan-warranty-input').value.trim();
         const is_recommended = card.querySelector('.plan-rec-input').checked;
-        plans.push({ num, name, price, support_hours, features, is_recommended });
+        plans.push({ num, name, price, support_hours, features, mobile_scope, warranty, is_recommended });
       });
       return plans;
     }
@@ -706,7 +708,7 @@
 
     function addPlan() {
       const plans = readPlansFromForm();
-      plans.push({ name: 'Nuevo Plan', price: 0, support_hours: '', features: '', is_recommended: false });
+      plans.push({ name: 'Nuevo Plan', price: 0, support_hours: '', features: '', mobile_scope: '', warranty: '', is_recommended: false });
       renderPlans(plans);
     }
 
@@ -719,7 +721,7 @@
 
     function renderPlans(plans) {
       const container = document.getElementById('plansContainer');
-      if (!plans.length) plans = [{ name: 'Plan Único', price: 0, support_hours: '', features: '', is_recommended: false }];
+      if (!plans.length) plans = [{ name: 'Plan Único', price: 0, support_hours: '', features: '', mobile_scope: '', warranty: '', is_recommended: false }];
       container.innerHTML = '';
       plans.forEach((plan, idx) => {
         const div = document.createElement('div');
@@ -741,6 +743,14 @@
             <div class="form-group">
               <label class="form-label">Horas Soporte Incluidas</label>
               <input type="text" class="form-control plan-support-input" value="${escapeAttr(plan.support_hours)}">
+            </div>
+            <div class="form-group">
+              <label class="form-label">App Móvil <span style="font-weight: 500; color: var(--slate-500);">(pastilla del desglose)</span></label>
+              <input type="text" class="form-control plan-mobile-input" value="${escapeAttr(plan.mobile_scope || '')}" placeholder="Ej. Conectamos tu app actual">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Garantía Directa <span style="font-weight: 500; color: var(--slate-500);">(pastilla del desglose)</span></label>
+              <input type="text" class="form-control plan-warranty-input" value="${escapeAttr(plan.warranty || '')}" placeholder="Ej. 30 días de cobertura bugs">
             </div>
             <div class="form-group">
               <label class="form-label">Alcance y Entregables <span style="font-weight: 500; color: var(--slate-500);">(uno por línea)</span></label>

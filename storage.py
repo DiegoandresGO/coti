@@ -41,6 +41,8 @@ DEFAULT_PROPOSAL = {
             "name": "Plan Esencial / MVP",
             "price": 2500000,
             "support_hours": "8 horas",
+            "mobile_scope": "Conectamos tu app actual",
+            "warranty": "30 días de cobertura bugs",
             "features": (
                 "Aplicación web: La plataforma a la que entras desde el navegador, en computador o celular, para registrar y consultar tu información.\n"
                 "App móvil para Android (APK): El instalador de la app. Se lo pasas a tu equipo y lo instalan directo en el celular, sin pasar por la Play Store.\n"
@@ -54,6 +56,8 @@ DEFAULT_PROPOSAL = {
             "name": "Plan Estándar Profesional",
             "price": 4000000,
             "support_hours": "15 horas",
+            "mobile_scope": "Optimizamos tu app actual",
+            "warranty": "30 días de cobertura bugs",
             "features": (
                 "Aplicación web completa: Todos los módulos del alcance funcionando, no solo lo básico.\n"
                 "App móvil optimizada (APK): El instalador de Android, ajustado para que abra rápido, pese menos y funcione sin señal; los datos se suben cuando vuelve la conexión.\n"
@@ -68,6 +72,8 @@ DEFAULT_PROPOSAL = {
             "name": "Plan Avanzado & Escalable",
             "price": 5000000,
             "support_hours": "20 horas",
+            "mobile_scope": "App nueva, hecha por nosotros",
+            "warranty": "30 días de cobertura bugs",
             "features": (
                 "Aplicación web completa: Todos los módulos del alcance funcionando, no solo lo básico.\n"
                 "App móvil optimizada (APK): El instalador de Android, ajustado para que abra rápido, pese menos y funcione sin señal; los datos se suben cuando vuelve la conexión.\n"
