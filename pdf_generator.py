@@ -479,7 +479,57 @@ def generate_quotation_pdf(data):
     ]))
     story.append(excl_table)
     story.append(Spacer(1, 9))
-    
+
+    # Valores aproximados de referencia: precios de terceros, NO suman al total
+    costos_ref = storage.exclusion_cost_items(data.get("exclusion_costs")) \
+        if data.get("show_exclusion_costs", True) else []
+    if costos_ref:
+        story.append(Paragraph(
+            "<b>Valores aproximados de referencia.</b> Son precios de terceros, no hacen parte de esta "
+            "cotización y pueden variar según el proveedor, el consumo y la TRM del día.",
+            body_style))
+        story.append(Spacer(1, 4))
+
+        ref_data = [[
+            Paragraph("Concepto", table_header_style),
+            Paragraph("Valor aproximado", table_header_style)
+        ]]
+        for c in costos_ref:
+            concepto = f"<b>{escape(c['concept'])}</b>"
+            if c["note"]:
+                concepto += f"<br/><font size='7' color='#64748B'>{escape(c['note'])}</font>"
+            ref_data.append([
+                Paragraph(concepto, table_cell_style),
+                Paragraph(c["label"], table_cell_style)
+            ])
+
+        totales = storage.exclusion_cost_totals(data.get("exclusion_costs"))
+        if totales:
+            ref_data.append([
+                Paragraph("<b>Estimado total</b>", table_cell_style),
+                Paragraph("<b>" + " · ".join(t["label"] for t in totales) + "</b>", table_cell_style)
+            ])
+
+        ref_table = Table(ref_data, colWidths=[350, 190])
+        estilo_ref = [
+            ('BACKGROUND', (0,0), (-1,0), PRIMARY_DARK),
+            ('ALIGN', (1,0), (1,-1), 'RIGHT'),
+            ('VALIGN', (0,0), (-1,-1), 'TOP'),
+            ('BOX', (0,0), (-1,-1), 1, BORDER_LIGHT),
+            ('INNERGRID', (0,0), (-1,-1), 0.5, BORDER_LIGHT),
+            ('TOPPADDING', (0,0), (-1,-1), 5),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+            ('LEFTPADDING', (0,0), (-1,-1), 7),
+            ('RIGHTPADDING', (0,0), (-1,-1), 7),
+            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, BG_CARD]),
+        ]
+        if totales:
+            estilo_ref.append(('BACKGROUND', (0,-1), (-1,-1), BG_CARD))
+            estilo_ref.append(('LINEABOVE', (0,-1), (-1,-1), 1, BORDER_LIGHT))
+        ref_table.setStyle(TableStyle(estilo_ref))
+        story.append(ref_table)
+        story.append(Spacer(1, 9))
+
     # ==========================
     # 7. LIMITANTES Y CONDICIONES TÉCNICAS
     # ==========================

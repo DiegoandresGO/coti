@@ -555,6 +555,46 @@
             {% endfor %}
           </ul>
         </div>
+        {% set costos = exclusion_cost_items(data.exclusion_costs) if data.show_exclusion_costs != false else [] %}
+        {% if costos %}
+        {% set totales = exclusion_cost_totals(data.exclusion_costs) %}
+        <div style="margin-top: 16px;">
+          <h3 style="font-size: 13.5px; font-weight: 800; color: var(--slate-900); margin-bottom: 4px;">
+            Valores aproximados de referencia
+          </h3>
+          <p style="font-size: 12.5px; color: var(--slate-500); line-height: 1.5; margin-bottom: 10px;">
+            Para que puedas presupuestarlos. Son precios de terceros, no hacen parte de esta cotización
+            y pueden variar según el proveedor, el consumo y la TRM del día.
+          </p>
+          <div class="table-responsive">
+            <table class="data-table stack-mobile">
+              <thead>
+                <tr>
+                  <th>Concepto</th>
+                  <th style="width: 42%; text-align: right;">Valor aproximado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for c in costos %}
+                <tr>
+                  <td>
+                    <strong style="color: var(--slate-900);">{{ c.concept }}</strong>
+                    {% if c.note %}<br><span style="font-size: 12px; color: var(--slate-500);">{{ c.note }}</span>{% endif %}
+                  </td>
+                  <td style="text-align: right; white-space: nowrap; color: var(--slate-700); font-weight: 700;">{{ c.label }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% if totales %}
+          <div style="margin-top: 10px; font-size: 12.5px; color: var(--slate-600); line-height: 1.6;">
+            <strong style="color: var(--slate-900);">Estimado total:</strong>
+            {% for t in totales %}{{ t.label }}{% if not loop.last %} · {% endif %}{% endfor %}
+          </div>
+          {% endif %}
+        </div>
+        {% endif %}
         {% if data.exclusions %}
         <div style="margin-top: 14px; padding: 12px 16px; border-radius: 12px; background: rgba(16, 185, 129, 0.10); border: 1px solid rgba(16, 185, 129, 0.35); font-size: 13px; line-height: 1.5;">
           Si lo deseas, también podemos apoyarte a cotizar y gestionar estos servicios (hosting, dominio, cuentas de tiendas y más) para que no tengas que preocuparte por nada.

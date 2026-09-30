@@ -1,3 +1,4 @@
+import copy
 import json
 import os
 import secrets
@@ -76,6 +77,17 @@ DEFAULT_PROPOSAL = {
         "Consumo de APIs de Inteligencia Artificial: Saldo o tokens facturados directamente por proveedores externos (OpenAI, Gemini, etc.).",
         "Licenciamiento de Terceros y Cuentas de Desarrollador: Membresías de tiendas (Google Play $25 USD / Apple $99 USD) o librerías pagas.",
         "Tiempos de Aprobación de Tiendas: Los tiempos de validación de Google o Apple escapan al control del equipo de desarrollo."
+    ],
+    "show_exclusion_costs": True,
+    "exclusion_costs": [
+        {"concept": "Servidor / VPS / Hosting", "min": 25000, "max": 120000, "currency": "COP", "period": "mes"},
+        {"concept": "Dominio (.com / .co)", "min": 60000, "max": 130000, "currency": "COP", "period": "anio"},
+        {"concept": "Certificado SSL", "min": 0, "max": 150000, "currency": "COP", "period": "anio",
+         "note": "Gratis con Let's Encrypt; el rango aplica si se exige certificado pago."},
+        {"concept": "Consumo de APIs de IA (OpenAI, Gemini)", "min": 20000, "max": 200000, "currency": "COP", "period": "mes",
+         "note": "Depende por completo del volumen de uso."},
+        {"concept": "Cuenta de desarrollador Google Play", "min": 25, "max": 25, "currency": "USD", "period": "unico"},
+        {"concept": "Cuenta de desarrollador Apple", "min": 99, "max": 99, "currency": "USD", "period": "anio"}
     ],
     "limitations": [
         "Entrega en formato APK: La app móvil se entrega como paquete instalador APK firmado. No incluye publicación en Google Play Store salvo contratación adicional.",
@@ -217,6 +229,10 @@ def _row_to_data(row):
     # El número y el código de acceso vienen siempre del registro
     data["quote_number"] = row["id"]
     data["access_token"] = row["access_token"]
+    # Cotizaciones anteriores a los valores de referencia arrancan con la plantilla.
+    # Una lista vacía guardada a propósito se respeta: solo se rellena si la clave no existe.
+    if "exclusion_costs" not in data:
+        data["exclusion_costs"] = copy.deepcopy(DEFAULT_PROPOSAL["exclusion_costs"])
     return data
 
 
@@ -479,6 +495,96 @@ def plan_items(features) -> list:
         text = str(features or "")
         items = text.splitlines() if "\n" in text else text.split(" + ")
     return [i.strip(" \t-•✔") for i in items if i.strip(" \t-•✔")]
+
+
+PERIOD_LABELS = {"mes": "/mes", "anio": "/año", "unico": " pago único"}
+
+
+def _money(value: float, currency: str) -> str:
+    """Formatea un valor de referencia. COP sin decimales, USD admite centavos."""
+    try:
+        v = float(value or 0)
+    except (TypeError, ValueError):
+        v = 0.0
+    if (currency or "COP").upper() == "USD":
+        return "$ " + ("%g" % v)
+    return "$ " + "{:,.0f}".format(v).replace(",", ".")
+
+
+def _cost_label(rango: str, currency: str, period: str) -> str:
+    """Une rango, moneda y periodicidad: '$ 25.000 – $ 120.000 COP/mes'."""
+    return "%s %s%s" % (rango, currency, PERIOD_LABELS.get(period, ""))
+
+
+def exclusion_cost_items(costs) -> list:
+    """Normaliza los costos de referencia y arma la etiqueta de cada fila.
+    Un ítem sin valor numérico se muestra igual, con el rango vacío."""
+    items = []
+    for c in costs or []:
+        if not isinstance(c, dict):
+            continue
+        concept = str(c.get("concept", "")).strip()
+        if not concept:
+            continue
+        currency = (c.get("currency") or "COP").upper()
+        period = c.get("period") or "mes"
+        try:
+            lo = float(c.get("min") or 0)
+            hi = float(c.get("max") or 0)
+        except (TypeError, ValueError):
+            lo = hi = 0.0
+        if hi < lo:
+            lo, hi = hi, lo
+
+        if lo <= 0 and hi <= 0:
+            rango = "Por definir"
+        elif lo == hi:
+            rango = _money(lo, currency)
+        elif lo <= 0:
+            rango = "Hasta " + _money(hi, currency)
+        else:
+            rango = _money(lo, currency) + " – " + _money(hi, currency)
+
+        items.append({
+            "concept": concept,
+            "note": str(c.get("note", "")).strip(),
+            "currency": currency,
+            "period": period,
+            "period_label": PERIOD_LABELS.get(period, ""),
+            "min": lo,
+            "max": hi,
+            "range_label": rango,
+            "label": rango if rango == "Por definir" else _cost_label(rango, currency, period),
+        })
+    return items
+
+
+def exclusion_cost_totals(costs) -> list:
+    """Suma los valores de referencia agrupados por moneda y periodicidad.
+    Nunca se mezclan monedas ni periodicidades distintas en un mismo total."""
+    grupos = {}
+    for it in exclusion_cost_items(costs):
+        if it["min"] <= 0 and it["max"] <= 0:
+            continue
+        clave = (it["currency"], it["period"])
+        g = grupos.setdefault(clave, {"min": 0.0, "max": 0.0})
+        g["min"] += it["min"]
+        g["max"] += it["max"]
+
+    orden = {"mes": 0, "anio": 1, "unico": 2}
+    salida = []
+    for (currency, period), g in sorted(grupos.items(), key=lambda k: (orden.get(k[0][1], 9), k[0][0])):
+        if g["min"] == g["max"]:
+            rango = _money(g["min"], currency)
+        else:
+            rango = _money(g["min"], currency) + " – " + _money(g["max"], currency)
+        salida.append({
+            "currency": currency,
+            "period": period,
+            "period_label": PERIOD_LABELS.get(period, ""),
+            "label": _cost_label(rango, currency, period),
+        })
+    return salida
 
 
 def plan_tax_details(plan_price: float, tax_rate: float, *args, **kwargs) -> dict:

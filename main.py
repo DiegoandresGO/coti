@@ -30,6 +30,8 @@ templates.env.filters["plan_items"] = storage.plan_items
 templates.env.globals["extra_services_flags"] = storage.extra_services_flags
 templates.env.globals["quote_whatsapp"] = storage.quote_whatsapp
 templates.env.globals["plan_tax_details"] = storage.plan_tax_details
+templates.env.globals["exclusion_cost_items"] = storage.exclusion_cost_items
+templates.env.globals["exclusion_cost_totals"] = storage.exclusion_cost_totals
 
 # ==========================================
 # CONFIGURACIÓN DE SEGURIDAD & AUTENTICACIÓN
