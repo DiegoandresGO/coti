@@ -583,6 +583,34 @@ def exclusion_cost_items(costs) -> list:
     return items
 
 
+def marked_items(items) -> list:
+    """Normaliza exclusiones y limitantes a [{"text", "plans"}].
+    Acepta el formato antiguo (lista de textos) y el nuevo (dicts con planes)."""
+    salida = []
+    for it in items or []:
+        if isinstance(it, dict):
+            texto = str(it.get("text", "")).strip()
+            planes = it.get("plans") or []
+            try:
+                planes = [int(p) for p in planes]
+            except (TypeError, ValueError):
+                planes = []
+        else:
+            texto, planes = str(it or "").strip(), []
+        if texto:
+            salida.append({"text": texto, "plans": planes})
+    return salida
+
+
+def items_for_plan(items, plan_index) -> list:
+    """Solo las líneas que aplican al plan dado. Sin planes marcados = aplica a todos."""
+    try:
+        idx = int(plan_index)
+    except (TypeError, ValueError):
+        idx = 0
+    return [it for it in marked_items(items) if not it["plans"] or idx in it["plans"]]
+
+
 def split_item(text) -> dict:
     """Separa "Título: descripción" para darle jerarquía al ítem.
     Solo parte en el primer ':' y si el título es corto; si no, va todo como cuerpo."""

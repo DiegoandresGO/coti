@@ -272,21 +272,33 @@
       <div id="tabLimits" class="tab-content">
         <div class="grid-2">
           <div class="card">
-            <div class="section-header">
-              <span class="section-num">04</span>
-              <h2 class="section-title">Costos No Asumidos (Exclusiones)</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px;">
+              <div class="section-header" style="margin-bottom: 0;">
+                <span class="section-num">04</span>
+                <h2 class="section-title">Costos No Asumidos (Exclusiones)</h2>
+              </div>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="addMarkedItem('exclusionsContainer')">➕ Agregar</button>
             </div>
-            <p style="font-size: 12.5px; color: var(--slate-500); margin-bottom: 8px;">Una exclusión por línea.</p>
-            <textarea id="exclusions_text" class="form-control" rows="9"></textarea>
+            <p style="font-size: 12.5px; color: var(--slate-500); margin-bottom: 12px; line-height: 1.5;">
+              Escribe <strong>Título: explicación</strong> para que el título salga destacado.
+              Marca los planes donde aplica; sin marcas, sale en todos.
+            </p>
+            <div id="exclusionsContainer" style="display: flex; flex-direction: column; gap: 10px;"></div>
           </div>
 
           <div class="card">
-            <div class="section-header">
-              <span class="section-num">05</span>
-              <h2 class="section-title">Limitantes</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px;">
+              <div class="section-header" style="margin-bottom: 0;">
+                <span class="section-num">05</span>
+                <h2 class="section-title">Limitantes</h2>
+              </div>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="addMarkedItem('limitationsContainer')">➕ Agregar</button>
             </div>
-            <p style="font-size: 12.5px; color: var(--slate-500); margin-bottom: 8px;">Una limitante por línea.</p>
-            <textarea id="limitations_text" class="form-control" rows="9"></textarea>
+            <p style="font-size: 12.5px; color: var(--slate-500); margin-bottom: 12px; line-height: 1.5;">
+              Escribe <strong>Título: explicación</strong> para que el título salga destacado.
+              Marca los planes donde aplica; sin marcas, sale en todos.
+            </p>
+            <div id="limitationsContainer" style="display: flex; flex-direction: column; gap: 10px;"></div>
           </div>
         </div>
 
@@ -559,8 +571,6 @@
       document.getElementById('show_hourly_supp').checked = data.show_hourly_supp !== false;
       updateExtrasUI();
 
-      document.getElementById('exclusions_text').value = (data.exclusions || []).join('\n');
-      document.getElementById('limitations_text').value = (data.limitations || []).join('\n');
       document.getElementById('show_exclusion_costs').checked = data.show_exclusion_costs !== false;
       renderExclusionCosts(data.exclusion_costs || []);
       updateExclusionCostsUI();
@@ -584,7 +594,18 @@
       onTaxChange();
 
       renderPlans(data.plans || []);
+      // Después de los planes: las marcas necesitan saber cuántos hay y cómo se llaman
+      renderMarkedItems('exclusionsContainer', normalizeMarked(data.exclusions));
+      renderMarkedItems('limitationsContainer', normalizeMarked(data.limitations));
       autoGrowAll();
+    }
+
+    // Espejo de storage.marked_items: acepta el formato antiguo (textos sueltos)
+    function normalizeMarked(items) {
+      return (items || []).map(it => (typeof it === 'string')
+        ? { text: it.trim(), plans: [] }
+        : { text: String(it.text || '').trim(), plans: (it.plans || []).map(Number) }
+      ).filter(it => it.text);
     }
 
     function onTaxChange() {
@@ -605,6 +626,81 @@
         const checked = document.getElementById('show_' + item.dataset.extra).checked;
         item.classList.toggle('is-off', !checked);
         item.querySelectorAll('.form-control').forEach(inp => inp.disabled = !checked);
+      });
+    }
+
+    // ---- Exclusiones y limitantes con marcas por plan ----
+    function currentPlanLabels() {
+      const cards = document.querySelectorAll('#plansContainer .plan-card');
+      if (cards.length) {
+        return [...cards].map((c, i) => c.querySelector('.plan-name-input').value.trim() || ('Opción ' + (i + 1)));
+      }
+      return (currentProposal.plans || []).map((p, i) => p.name || ('Opción ' + (i + 1)));
+    }
+
+    // Mantiene los nombres de plan al día en las casillas ya pintadas
+    function refreshMarkedLabels() {
+      const labels = currentPlanLabels();
+      document.querySelectorAll('.mi-plan-chk').forEach(chk => {
+        const span = chk.parentElement.querySelector('.mi-plan-label');
+        const lb = labels[Number(chk.dataset.plan)];
+        if (span && lb) span.textContent = lb;
+      });
+    }
+
+    function markedItemHTML(item) {
+      const labels = currentPlanLabels();
+      const sel = (item.plans || []).map(Number);
+      const chks = labels.map((lb, i) => `
+        <label style="display: inline-flex; align-items: center; gap: 5px; font-size: 12px; cursor: pointer;">
+          <input type="checkbox" class="mi-plan-chk" data-plan="${i}" ${sel.includes(i) ? 'checked' : ''}>
+          <span class="mi-plan-label">${escapeAttr(lb)}</span>
+        </label>`).join('');
+      return `
+        <div style="display: flex; gap: 8px; align-items: flex-start;">
+          <textarea class="form-control mi-text" rows="2" placeholder="Título: explicación">${escapeAttr(item.text || '')}</textarea>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="this.closest('.marked-item').remove()" style="color: var(--rose-700);">🗑️</button>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--slate-200);">
+          <span style="font-size: 11px; font-weight: 700; color: var(--slate-500); text-transform: uppercase; letter-spacing: 0.05em;">Aplica a:</span>
+          ${chks}
+        </div>`;
+    }
+
+    function appendMarkedItem(containerId, item) {
+      const div = document.createElement('div');
+      div.className = 'card marked-item';
+      div.style.padding = '12px 14px';
+      div.style.background = 'var(--slate-50)';
+      div.innerHTML = markedItemHTML(item || {});
+      document.getElementById(containerId).appendChild(div);
+      autoGrowAll(div);
+      return div;
+    }
+
+    function renderMarkedItems(containerId, items) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = '';
+      (items || []).forEach(it => appendMarkedItem(containerId, it));
+    }
+
+    function addMarkedItem(containerId) {
+      const div = appendMarkedItem(containerId, { text: '', plans: [] });
+      div.querySelector('.mi-text').focus();
+    }
+
+    function readMarkedItems(containerId) {
+      return [...document.querySelectorAll('#' + containerId + ' .marked-item')].map(row => ({
+        text: row.querySelector('.mi-text').value.trim(),
+        plans: [...row.querySelectorAll('.mi-plan-chk')].filter(c => c.checked).map(c => Number(c.dataset.plan))
+      })).filter(it => it.text);
+    }
+
+    // Reindexa las marcas cuando se agrega o quita un plan
+    function remapMarkedPlans(fn) {
+      ['exclusionsContainer', 'limitationsContainer'].forEach(id => {
+        const items = readMarkedItems(id).map(it => ({ text: it.text, plans: fn(it.plans) }));
+        renderMarkedItems(id, items);
       });
     }
 
@@ -710,6 +806,7 @@
       const plans = readPlansFromForm();
       plans.push({ name: 'Nuevo Plan', price: 0, support_hours: '', features: '', mobile_scope: '', warranty: '', is_recommended: false });
       renderPlans(plans);
+      remapMarkedPlans(p => p);
     }
 
     function removePlan(idx) {
@@ -717,6 +814,8 @@
       if (plans.length <= 1) { uiAlert('No se puede quitar', 'La propuesta debe tener al menos 1 plan.', { icon: '⚠️' }); return; }
       plans.splice(idx, 1);
       renderPlans(plans);
+      // Los índices posteriores al plan eliminado se corren una posición
+      remapMarkedPlans(p => p.filter(i => i !== idx).map(i => i > idx ? i - 1 : i));
     }
 
     function renderPlans(plans) {
@@ -734,7 +833,7 @@
             </div>
             <div class="form-group" style="margin-top: 6px;">
               <label class="form-label">Nombre del Plan</label>
-              <input type="text" class="form-control plan-name-input" value="${escapeAttr(plan.name)}">
+              <input type="text" class="form-control plan-name-input" value="${escapeAttr(plan.name)}" oninput="refreshMarkedLabels()">
             </div>
             <div class="form-group">
               <label class="form-label">Inversión Total (COP)</label>
@@ -806,10 +905,10 @@
         show_hourly_dev: document.getElementById('show_hourly_dev').checked,
         show_hourly_supp: document.getElementById('show_hourly_supp').checked,
 
-        exclusions: document.getElementById('exclusions_text').value.split('\n').filter(s => s.trim()),
+        exclusions: readMarkedItems('exclusionsContainer'),
         show_exclusion_costs: document.getElementById('show_exclusion_costs').checked,
         exclusion_costs: readExclusionCostsFromForm(),
-        limitations: document.getElementById('limitations_text').value.split('\n').filter(s => s.trim()),
+        limitations: readMarkedItems('limitationsContainer'),
 
         tax_type: tax_type,
         tax_rate: tax_rate,

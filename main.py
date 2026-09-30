@@ -31,6 +31,7 @@ templates.env.globals["extra_services_flags"] = storage.extra_services_flags
 templates.env.globals["quote_whatsapp"] = storage.quote_whatsapp
 templates.env.globals["plan_tax_details"] = storage.plan_tax_details
 templates.env.filters["split_item"] = storage.split_item
+templates.env.globals["marked_items"] = storage.marked_items
 templates.env.globals["exclusion_cost_items"] = storage.exclusion_cost_items
 
 # ==========================================

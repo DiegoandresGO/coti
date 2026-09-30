@@ -615,16 +615,16 @@
     <!-- 05 & 06. EXCLUSIONES Y LIMITANTES -->
     <div class="grid-2">
       <!-- Exclusiones -->
-      <section class="card">
+      <section class="card" id="exclusionsCard">
         <div class="section-header">
           <span class="section-num">04</span>
           <h2 class="section-title">Costos No Asumidos (Exclusiones)</h2>
         </div>
         <div class="alert-box alert-rose">
-          <ul class="fact-list">
-            {% for ex in data.exclusions %}
-            {% set item = ex|split_item %}
-            <li class="fact-item">
+          <ul class="fact-list" id="exclusionsList">
+            {% for ex in marked_items(data.exclusions) %}
+            {% set item = ex.text|split_item %}
+            <li class="fact-item" data-plans="{{ ex.plans|join(',') }}">
               <span class="fact-dot"></span>
               <div>
                 {% if item.title %}<strong class="fact-title">{{ item.title }}</strong>{% endif %}
@@ -637,16 +637,16 @@
       </section>
 
       <!-- Limitantes -->
-      <section class="card">
+      <section class="card" id="limitationsCard">
         <div class="section-header">
           <span class="section-num">05</span>
           <h2 class="section-title">Limitantes</h2>
         </div>
         <div class="alert-box alert-slate">
-          <ul class="fact-list">
-            {% for lim in data.limitations %}
-            {% set item = lim|split_item %}
-            <li class="fact-item">
+          <ul class="fact-list" id="limitationsList">
+            {% for lim in marked_items(data.limitations) %}
+            {% set item = lim.text|split_item %}
+            <li class="fact-item" data-plans="{{ lim.plans|join(',') }}">
               <span class="fact-dot"></span>
               <div>
                 {% if item.title %}<strong class="fact-title">{{ item.title }}</strong>{% endif %}
@@ -1068,6 +1068,22 @@
       return '$ ' + Math.round(val).toLocaleString('es-CO') + ' COP';
     }
 
+    // Muestra solo las líneas marcadas para el plan elegido.
+    // Una línea sin planes marcados aplica a todos; si no queda ninguna, se oculta la tarjeta.
+    function filtrarPorPlan(listId, cardId, index) {
+      const lista = document.getElementById(listId);
+      if (!lista) return;
+      let visibles = 0;
+      lista.querySelectorAll('.fact-item').forEach(li => {
+        const raw = (li.dataset.plans || '').trim();
+        const aplica = !raw || raw.split(',').map(Number).includes(index);
+        li.hidden = !aplica;
+        if (aplica) visibles++;
+      });
+      const card = document.getElementById(cardId);
+      if (card) card.hidden = visibles === 0;
+    }
+
     // Espejo de storage.split_item: separa "Título: explicación" del alcance de cada plan
     function splitItem(text) {
       const raw = String(text ?? '').trim();
@@ -1130,6 +1146,10 @@
       const hayMovil = pastilla('detailMobileBox', 'detailPlanMobile', plan.mobile_scope);
       const hayGarantia = pastilla('detailWarrantyBox', 'detailPlanWarranty', plan.warranty);
       document.getElementById('detailPillsRow').hidden = !(hayMovil || hayGarantia);
+
+      // 1.c Exclusiones y limitantes que aplican a este plan
+      filtrarPorPlan('exclusionsList', 'exclusionsCard', index);
+      filtrarPorPlan('limitationsList', 'limitationsCard', index);
       const descList = document.getElementById('detailPlanDesc');
       descList.innerHTML = '';
       (Array.isArray(plan.features) ? plan.features
