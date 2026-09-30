@@ -541,15 +541,8 @@
           </div>
         </div>
 
-        <div class="grid-3" style="gap: 12px; margin-top: 16px;">
-          <div class="detail-pill-box">
-            <div class="detail-icon">⏱️</div>
-            <div>
-              <div style="font-size: 11.5px; color: var(--slate-500); font-weight: 600;">Soporte Técnico</div>
-              <strong id="detailPlanHours" style="color: var(--emerald-700); font-size: 13.5px;">Incluido</strong>
-            </div>
-          </div>
-          {# Estas dos dependen del plan: se ocultan si el plan no las define #}
+        {# Ambas dependen del plan: la fila entera se oculta si ninguna tiene texto #}
+        <div class="grid-3" id="detailPillsRow" style="gap: 12px; margin-top: 16px;">
           <div class="detail-pill-box" id="detailMobileBox" hidden>
             <div class="detail-icon">📱</div>
             <div>
@@ -1125,8 +1118,6 @@
       // 2. Actualizar Tarjeta de Desglose Específico
       document.getElementById('detailPlanTitle').textContent = plan.num + ' — ' + plan.name;
       document.getElementById('detailPlanPrice').textContent = formatCOP(plan.price);
-      document.getElementById('detailPlanHours').textContent = 'Incluido';
-
       // App móvil y garantía cambian según el plan; sin texto, la pastilla no se muestra
       const pastilla = (boxId, valueId, texto) => {
         const box = document.getElementById(boxId);
@@ -1134,9 +1125,11 @@
         const t = String(texto || '').trim();
         val.textContent = t;
         box.hidden = !t;
+        return !!t;
       };
-      pastilla('detailMobileBox', 'detailPlanMobile', plan.mobile_scope);
-      pastilla('detailWarrantyBox', 'detailPlanWarranty', plan.warranty);
+      const hayMovil = pastilla('detailMobileBox', 'detailPlanMobile', plan.mobile_scope);
+      const hayGarantia = pastilla('detailWarrantyBox', 'detailPlanWarranty', plan.warranty);
+      document.getElementById('detailPillsRow').hidden = !(hayMovil || hayGarantia);
       const descList = document.getElementById('detailPlanDesc');
       descList.innerHTML = '';
       (Array.isArray(plan.features) ? plan.features
