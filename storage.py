@@ -34,28 +34,6 @@ DEFAULT_PROPOSAL = {
         "en un libro contable centralizado. La solución incluye la aplicación web responsive conectada a backend en la nube, "
         "el panel administrativo de gestión y la compilación de la aplicación móvil en formato APK optimizada."
     ),
-    "modules": [
-        {
-            "name": "Portal Web MyFinces",
-            "desc": "Interfaz web responsiva para registro, conciliación mensual de ingresos/gastos, balance en tiempo real y gráficos analíticos."
-        },
-        {
-            "name": "Conexión Web & Backend Seguro",
-            "desc": "APIs RESTful seguras que sincronizan la aplicación web y móvil con la base de datos central protegida."
-        },
-        {
-            "name": "Panel Administrativo y Auditoría",
-            "desc": "Administración de usuarios, monitoreo de sesiones, configuración de parámetros y control centralizado."
-        },
-        {
-            "name": "Aplicación Móvil (Entrega APK)",
-            "desc": "App móvil compilada en paquete instalador APK para Android con diseño rápido, modo offline y sincronización."
-        },
-        {
-            "name": "Ingeniería, Despliegue y Soporte",
-            "desc": "Ciclo completo de ingeniería, puesta en marcha en servidor y acompañamiento técnico post-entrega garantizado."
-        }
-    ],
     "plans": [
         {
             "num": "Opción 1",

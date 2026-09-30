@@ -390,39 +390,10 @@
       </div>
     </section>
 
-    <!-- 02. MÓDULOS DE ALCANCE -->
-    <section class="card">
-      <div class="section-header">
-        <span class="section-num">02</span>
-        <h2 class="section-title">Módulos de Alcance Funcional</h2>
-      </div>
-      <div class="table-responsive">
-        <table class="data-table stack-mobile">
-          <thead>
-            <tr>
-              <th style="width: 28%;">Módulo / Componente</th>
-              <th>Descripción del Alcance Técnico-Funcional</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for mod in data.modules %}
-            <tr>
-              <td>
-                <span style="font-size: 11px; font-weight: 800; color: var(--primary);">MOD-{{ "%02d"|format(loop.index) }}</span><br>
-                <strong style="color: var(--slate-900);">{{ mod.name }}</strong>
-              </td>
-              <td style="color: var(--slate-600); line-height: 1.5;">{{ mod.desc }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- 03. PLANES DE INVERSIÓN (INTERACTIVO) -->
+    <!-- 02. PLANES DE INVERSIÓN (INTERACTIVO) -->
     <section class="card" id="seccionPlanes">
       <div class="section-header">
-        <span class="section-num">03</span>
+        <span class="section-num">02</span>
         <h2 class="section-title">Opciones de Inversión y Planes Disponibles</h2>
       </div>
       <p style="font-size: 13.5px; color: var(--slate-500); margin-bottom: 20px;">
@@ -524,12 +495,12 @@
 
     </section>
 
-    <!-- 04. SERVICIOS Y TARIFAS ADICIONALES (opcional) -->
+    <!-- 03. SERVICIOS Y TARIFAS ADICIONALES (opcional) -->
     {% set extras = extra_services_flags(data) %}
     {% if extras.any %}
     <section class="card">
       <div class="section-header">
-        <span class="section-num">04</span>
+        <span class="section-num">03</span>
         <h2 class="section-title">Servicios Complementarios y Bolsa de Horas</h2>
       </div>
       <div class="table-responsive">
@@ -574,7 +545,7 @@
       <!-- Exclusiones -->
       <section class="card">
         <div class="section-header">
-          <span class="section-num">05</span>
+          <span class="section-num">04</span>
           <h2 class="section-title">Costos No Asumidos (Exclusiones)</h2>
         </div>
         <div class="alert-box alert-rose">
@@ -594,7 +565,7 @@
       <!-- Limitantes -->
       <section class="card">
         <div class="section-header">
-          <span class="section-num">06</span>
+          <span class="section-num">05</span>
           <h2 class="section-title">Limitantes</h2>
         </div>
         <div class="alert-box alert-slate">
@@ -607,10 +578,10 @@
       </section>
     </div>
 
-    <!-- 07. FORMAS DE PAGO Y LIQUIDACIÓN (RECALCULABLE DINÁMICAMENTE) -->
+    <!-- 06. FORMAS DE PAGO Y LIQUIDACIÓN (RECALCULABLE DINÁMICAMENTE) -->
     <section class="card" id="seccionLiquidacion">
       <div class="section-header">
-        <span class="section-num">07</span>
+        <span class="section-num">06</span>
         <h2 class="section-title">Condiciones Comerciales y Formas de Pago</h2>
       </div>
       <p style="font-size: 13.5px; color: var(--slate-600); margin-bottom: 14px;">

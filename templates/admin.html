@@ -167,7 +167,7 @@
 
     <!-- PESTAÑAS DE CONFIGURACIÓN -->
     <div class="tabs-header">
-      <button type="button" class="tab-btn active" onclick="switchTab('tabScope')">🎯 1. Alcance & Módulos</button>
+      <button type="button" class="tab-btn active" onclick="switchTab('tabScope')">🎯 1. Alcance del Proyecto</button>
       <button type="button" class="tab-btn" onclick="switchTab('tabPlans')">💰 2. Planes & Precios</button>
       <button type="button" class="tab-btn" onclick="switchTab('tabLimits')">📋 3. Exclusiones & Limitantes</button>
       <button type="button" class="tab-btn" onclick="switchTab('tabPayments')">💳 4. Pagos & Facturación</button>
@@ -176,7 +176,7 @@
 
     <form id="quoteForm" onsubmit="event.preventDefault(); saveQuotation();">
       
-      <!-- TAB 1: ALCANCE & MÓDULOS -->
+      <!-- TAB 1: ALCANCE DEL PROYECTO -->
       <div id="tabScope" class="tab-content active">
         <div class="card">
           <div class="section-header">
@@ -201,26 +201,13 @@
           </div>
         </div>
 
-        <div class="card">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-            <div class="section-header" style="margin-bottom: 0;">
-              <span class="section-num">02</span>
-              <h2 class="section-title">Módulos del Sistema (Alcance Funcional)</h2>
-            </div>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="addModule()">➕ Agregar Módulo</button>
-          </div>
-
-          <div id="modulesContainer" style="display: flex; flex-direction: column; gap: 14px;">
-            <!-- Renderizado dinámico -->
-          </div>
-        </div>
       </div>
 
       <!-- TAB 2: PLANES & PRECIOS -->
       <div id="tabPlans" class="tab-content">
         <div class="card">
           <div class="section-header">
-            <span class="section-num">03</span>
+            <span class="section-num">02</span>
             <h2 class="section-title">Planes de Inversión (Tiers de Desarrollo)</h2>
           </div>
           <p style="font-size: 13.5px; color: var(--slate-500); margin-bottom: 20px;">
@@ -235,7 +222,7 @@
 
         <div class="card">
           <div class="section-header">
-            <span class="section-num">04</span>
+            <span class="section-num">03</span>
             <h2 class="section-title">Servicios Complementarios y Tarifas por Hora</h2>
             <label class="switch-label" style="margin-left: auto;">
               <input type="checkbox" id="show_extra_services" onchange="updateExtrasUI()">
@@ -286,7 +273,7 @@
         <div class="grid-2">
           <div class="card">
             <div class="section-header">
-              <span class="section-num">05</span>
+              <span class="section-num">04</span>
               <h2 class="section-title">Costos No Asumidos (Exclusiones)</h2>
             </div>
             <p style="font-size: 12.5px; color: var(--slate-500); margin-bottom: 8px;">Una exclusión por línea.</p>
@@ -295,7 +282,7 @@
 
           <div class="card">
             <div class="section-header">
-              <span class="section-num">06</span>
+              <span class="section-num">05</span>
               <h2 class="section-title">Limitantes</h2>
             </div>
             <p style="font-size: 12.5px; color: var(--slate-500); margin-bottom: 8px;">Una limitante por línea.</p>
@@ -309,7 +296,7 @@
       <div id="tabPayments" class="tab-content">
         <div class="card">
           <div class="section-header">
-            <span class="section-num">07</span>
+            <span class="section-num">06</span>
             <h2 class="section-title">Condiciones Comerciales y Formas de Pago</h2>
           </div>
 
@@ -492,7 +479,7 @@
       (root || document).querySelectorAll('textarea.form-control').forEach(autoGrow);
     }
 
-    // Vale para las áreas creadas después (módulos, planes)
+    // Vale para las áreas creadas después (planes)
     document.addEventListener('input', (e) => {
       if (e.target.matches && e.target.matches('textarea.form-control')) autoGrow(e.target);
     });
@@ -569,55 +556,8 @@
       document.getElementById('rete_ica_pm').value = data.rete_ica_pm ?? 9.66;
       onTaxChange();
 
-      renderModules(data.modules || []);
       renderPlans(data.plans || []);
       autoGrowAll();
-    }
-
-    function renderModules(modules) {
-      const container = document.getElementById('modulesContainer');
-      container.innerHTML = '';
-      modules.forEach((mod, idx) => {
-        const div = document.createElement('div');
-        div.className = 'card';
-        div.style.padding = '14px 16px';
-        div.style.background = 'var(--slate-50)';
-        div.innerHTML = `
-          <div class="module-row" style="display: flex; gap: 12px; align-items: flex-start;">
-            <div style="flex: 1;">
-              <input type="text" class="form-control mod-name" value="${escapeAttr(mod.name)}" placeholder="Nombre del Módulo" style="font-weight: 700;">
-            </div>
-            <div style="flex: 2;">
-              <textarea class="form-control mod-desc" rows="2" placeholder="Descripción del Alcance">${escapeAttr(mod.desc)}</textarea>
-            </div>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="this.closest('.card').remove()" style="color: var(--rose-700);">🗑️</button>
-          </div>
-        `;
-        container.appendChild(div);
-      });
-      autoGrowAll(container);
-    }
-
-    function addModule() {
-      const container = document.getElementById('modulesContainer');
-      const div = document.createElement('div');
-      div.className = 'card';
-      div.style.padding = '14px 16px';
-      div.style.background = 'var(--slate-50)';
-      div.innerHTML = `
-        <div class="module-row" style="display: flex; gap: 12px; align-items: flex-start;">
-          <div style="flex: 1;">
-            <input type="text" class="form-control mod-name" value="Nuevo Módulo" placeholder="Nombre del Módulo" style="font-weight: 700;">
-          </div>
-          <div style="flex: 2;">
-            <textarea class="form-control mod-desc" rows="2" placeholder="Descripción del Alcance">Descripción funcional del componente</textarea>
-          </div>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="this.closest('.card').remove()" style="color: var(--rose-700);">🗑️</button>
-        </div>
-      `;
-      container.appendChild(div);
-      autoGrowAll(div);
-      div.querySelector('.mod-name').focus();
     }
 
     function onTaxChange() {
@@ -720,14 +660,6 @@
     }
 
     function collectData() {
-      // Módulos
-      const modules = [];
-      document.querySelectorAll('#modulesContainer .card').forEach(row => {
-        const name = row.querySelector('.mod-name').value.trim();
-        const desc = row.querySelector('.mod-desc').value.trim();
-        if (name) modules.push({ name, desc });
-      });
-
       // Planes
       const plans = readPlansFromForm();
 
@@ -755,7 +687,6 @@
         project_category: document.getElementById('project_category').value,
         project_description: document.getElementById('project_description').value,
 
-        modules: modules,
         plans: plans,
 
         hourly_rate_dev: parseFloat(document.getElementById('hourly_rate_dev').value) || 75000,

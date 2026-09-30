@@ -312,63 +312,9 @@ def generate_quotation_pdf(data):
     story.append(Spacer(1, 8))
     
     # ==========================
-    # 4. MÓDULOS Y ALCANCE FUNCIONAL
+    # 4. PLANES DE INVERSIÓN (TIERS)
     # ==========================
-    story.append(Paragraph("<font color='#4F46E5'><b>02.</b></font> MÓDULOS DE ALCANCE FUNCIONAL", section_title_style))
-    
-    modules = data.get("modules", [
-        {
-            "name": "Portal Web MyFinces",
-            "desc": "Interfaz web responsiva para registro, conciliación mensual de ingresos/gastos, balance en tiempo real y gráficos analíticos."
-        },
-        {
-            "name": "Conexión Web & Backend Seguro",
-            "desc": "APIs RESTful seguras que sincronizan la aplicación web y móvil con la base de datos central protegida."
-        },
-        {
-            "name": "Panel Administrativo y Auditoría",
-            "desc": "Administración de usuarios, monitoreo de sesiones, configuración de parámetros y control centralizado."
-        },
-        {
-            "name": "Aplicación Móvil (Entrega APK)",
-            "desc": "App móvil compilada en paquete instalador APK para Android con diseño rápido, modo offline y sincronización."
-        },
-        {
-            "name": "Ingeniería, Despliegue y Soporte",
-            "desc": "Ciclo completo de ingeniería, puesta en marcha en servidor y acompañamiento técnico post-entrega garantizado."
-        }
-    ])
-    
-    mod_table_data = [[
-        Paragraph("Módulo / Componente", table_header_style),
-        Paragraph("Descripción del Alcance Técnico-Funcional", table_header_style)
-    ]]
-    for idx, m in enumerate(modules, start=1):
-        mod_table_data.append([
-            Paragraph(f"<font color='#4F46E5'><b>MOD-{idx:02d}</b></font><br/><b>{m['name']}</b>", table_cell_style),
-            Paragraph(m['desc'], table_cell_style)
-        ])
-    
-    mod_table = Table(mod_table_data, colWidths=[175, 365])
-    mod_table.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), PRIMARY_DARK),
-        ('ALIGN', (0,0), (-1,-1), 'LEFT'),
-        ('VALIGN', (0,0), (-1,-1), 'TOP'),
-        ('BOX', (0,0), (-1,-1), 1, BORDER_LIGHT),
-        ('INNERGRID', (0,0), (-1,-1), 0.5, BORDER_LIGHT),
-        ('TOPPADDING', (0,0), (-1,-1), 5),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 5),
-        ('LEFTPADDING', (0,0), (-1,-1), 7),
-        ('RIGHTPADDING', (0,0), (-1,-1), 7),
-        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, BG_CARD])
-    ]))
-    story.append(mod_table)
-    story.append(Spacer(1, 9))
-    
-    # ==========================
-    # 5. PLANES DE INVERSIÓN (TIERS)
-    # ==========================
-    story.append(Paragraph("<font color='#4F46E5'><b>03.</b></font> PLANES DE INVERSIÓN Y OPCIONES DE DESARROLLO", section_title_style))
+    story.append(Paragraph("<font color='#4F46E5'><b>02.</b></font> PLANES DE INVERSIÓN Y OPCIONES DE DESARROLLO", section_title_style))
     story.append(Paragraph(
         "Estructura en tres (3) niveles de inversión según profundidad del proyecto y bolsa de soporte técnico incluida en cada opción:",
         body_muted
@@ -459,10 +405,10 @@ def generate_quotation_pdf(data):
     story.append(Spacer(1, 9))
     
     # ==========================
-    # 6. SERVICIOS ADICIONALES Y TARIFAS
+    # 5. SERVICIOS ADICIONALES Y TARIFAS
     # ==========================
     if storage.extra_services_flags(data)["any"]:
-        story.append(Paragraph("<font color='#4F46E5'><b>04.</b></font> SERVICIOS COMPLEMENTARIOS Y BOLSA DE HORAS", section_title_style))
+        story.append(Paragraph("<font color='#4F46E5'><b>03.</b></font> SERVICIOS COMPLEMENTARIOS Y BOLSA DE HORAS", section_title_style))
     
         hourly_dev = data.get("hourly_rate_dev", 75000)
         hourly_supp = data.get("hourly_rate_supp", 50000)
@@ -510,9 +456,9 @@ def generate_quotation_pdf(data):
         story.append(Spacer(1, 9))
     
     # ==========================
-    # 7. COSTOS NO ASUMIDOS (EXCLUSIONES)
+    # 6. COSTOS NO ASUMIDOS (EXCLUSIONES)
     # ==========================
-    story.append(Paragraph("<font color='#4F46E5'><b>05.</b></font> COSTOS NO ASUMIDOS (EXCLUSIONES DE INFRAESTRUCTURA)", section_title_style))
+    story.append(Paragraph("<font color='#4F46E5'><b>04.</b></font> COSTOS NO ASUMIDOS (EXCLUSIONES DE INFRAESTRUCTURA)", section_title_style))
     exclusions = data.get("exclusions", [
         "<b>Servidor / VPS / Hosting:</b> El costo de infraestructura en la nube corre por cuenta directa del cliente.",
         "<b>Dominio y Certificados SSL:</b> La titularidad y renovación del dominio web es responsabilidad del cliente.",
@@ -535,9 +481,9 @@ def generate_quotation_pdf(data):
     story.append(Spacer(1, 9))
     
     # ==========================
-    # 8. LIMITANTES Y CONDICIONES TÉCNICAS
+    # 7. LIMITANTES Y CONDICIONES TÉCNICAS
     # ==========================
-    story.append(Paragraph("<font color='#4F46E5'><b>06.</b></font> LIMITANTES Y CONDICIONES TÉCNICAS", section_title_style))
+    story.append(Paragraph("<font color='#4F46E5'><b>05.</b></font> LIMITANTES Y CONDICIONES TÉCNICAS", section_title_style))
     limitations = data.get("limitations", [
         "<b>Entrega en formato APK:</b> La app móvil se entrega como paquete instalador APK firmado listo para Android.",
         "<b>Instalación y Desconocimiento de APK:</b> La distribución interna o instalación en terminales de usuarios finales es gestionada por el cliente.",
@@ -560,7 +506,7 @@ def generate_quotation_pdf(data):
     story.append(Spacer(1, 9))
     
     # ==========================
-    # 10. FORMAS DE PAGO Y CONDICIONES COMERCIALES
+    # 9. FORMAS DE PAGO Y CONDICIONES COMERCIALES
     # ==========================
     selected_plan_idx = data.get("selected_plan_index", 1)
     sel_plan = plans[min(max(selected_plan_idx, 0), len(plans)-1)]
@@ -644,7 +590,7 @@ def generate_quotation_pdf(data):
     ]))
     
     pay_section = [
-        Paragraph("<font color='#4F46E5'><b>07.</b></font> FORMAS DE PAGO Y CONDICIONES COMERCIALES", section_title_style),
+        Paragraph("<font color='#4F46E5'><b>06.</b></font> FORMAS DE PAGO Y CONDICIONES COMERCIALES", section_title_style),
         Spacer(1, 4),
         pay_table
     ]
