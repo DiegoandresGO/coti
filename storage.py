@@ -41,7 +41,12 @@ DEFAULT_PROPOSAL = {
             "name": "Plan Esencial / MVP",
             "price": 2500000,
             "support_hours": "8 horas",
-            "features": "Web App básica conectada + Entrega APK + 8 horas de soporte técnico incluidas.",
+            "features": (
+                "Aplicación web: La plataforma a la que entras desde el navegador, en computador o celular, para registrar y consultar tu información.\n"
+                "App móvil para Android (APK): El instalador de la app. Se lo pasas a tu equipo y lo instalan directo en el celular, sin pasar por la Play Store.\n"
+                "Datos sincronizados: Lo que registras en el celular aparece en la web y al revés, sin tener que pasar nada a mano.\n"
+                "8 horas de soporte: Bolsa de horas para ajustes y dudas después de la entrega, sin costo adicional."
+            ),
             "is_recommended": False
         },
         {
@@ -49,7 +54,13 @@ DEFAULT_PROPOSAL = {
             "name": "Plan Estándar Profesional",
             "price": 4000000,
             "support_hours": "15 horas",
-            "features": "Web completa + Panel Admin + Conexión sincronizada + APK optimizada + 15 horas de soporte técnico incluidas.",
+            "features": (
+                "Aplicación web completa: Todos los módulos del alcance funcionando, no solo lo básico.\n"
+                "App móvil optimizada (APK): El instalador de Android, ajustado para que abra rápido, pese menos y funcione sin señal; los datos se suben cuando vuelve la conexión.\n"
+                "Panel administrativo: Tu pantalla de control para crear usuarios, ver quién entró y cambiar parámetros sin depender de nosotros.\n"
+                "Datos sincronizados: Lo que registras en el celular aparece en la web y al revés, sin tener que pasar nada a mano.\n"
+                "15 horas de soporte: Bolsa de horas para ajustes y dudas después de la entrega, sin costo adicional."
+            ),
             "is_recommended": True
         },
         {
@@ -57,7 +68,14 @@ DEFAULT_PROPOSAL = {
             "name": "Plan Avanzado & Escalable",
             "price": 5000000,
             "support_hours": "20 horas",
-            "features": "Ecosistema completo Web + Admin + APK + Prioridad de entrega + 20 horas de soporte técnico incluidas.",
+            "features": (
+                "Aplicación web completa: Todos los módulos del alcance funcionando, no solo lo básico.\n"
+                "App móvil optimizada (APK): El instalador de Android, ajustado para que abra rápido, pese menos y funcione sin señal; los datos se suben cuando vuelve la conexión.\n"
+                "Panel administrativo: Tu pantalla de control para crear usuarios, ver quién entró y cambiar parámetros sin depender de nosotros.\n"
+                "Preparado para crecer: La plataforma queda montada para aguantar más usuarios y más información sin tener que rehacerla.\n"
+                "Prioridad de entrega: Tu proyecto encabeza la fila de trabajo, así que los tiempos de entrega son los más cortos de los tres planes.\n"
+                "20 horas de soporte: Bolsa de horas para ajustes y dudas después de la entrega, sin costo adicional."
+            ),
             "is_recommended": False
         }
     ],

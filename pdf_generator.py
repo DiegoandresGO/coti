@@ -379,7 +379,8 @@ def generate_quotation_pdf(data):
         price_val = p.get('price', 0)
         tinfo = storage.plan_tax_details(price_val, tax_rate, price_inc)
         if tinfo["has_tax"]:
-            if tinfo["includes_tax"]:
+            # plan_tax_details no devuelve "includes_tax": los planes son netos y el IVA se suma
+            if tinfo.get("includes_tax"):
                 price_cell = (
                     f"<b>{format_currency(tinfo['total'])}</b><br/>"
                     f"<font size=7.5 color='#059669'><b>✔ Incluye IVA ({tinfo['rate']:g}%):</b><br/>{format_currency(tinfo['iva'])}</font><br/>"
@@ -398,7 +399,11 @@ def generate_quotation_pdf(data):
             Paragraph(f"{badge_text}<b>{p['num']}</b><br/><font color='#64748B'>{p['name']}</font>", table_cell_style),
             Paragraph(price_cell, ParagraphStyle('PVal', parent=table_cell_style, leading=9.5)),
             Paragraph(f"<b>{hours_val}</b><br/><font color='#64748B' size=7.5>Sin cobro mensual</font>", table_cell_style),
-            Paragraph("<br/>".join(f"• {escape(i)}" for i in storage.plan_items(p.get('features'))), table_cell_style)
+            # Solo la etiqueta corta: la explicación va en el detalle del plan elegido
+            Paragraph("<br/>".join(
+                "• " + escape(storage.split_item(i)["title"] or storage.split_item(i)["body"])
+                for i in storage.plan_items(p.get('features'))
+            ), table_cell_style)
         ])
     
     plans_table = Table(plans_table_data, colWidths=[120, 120, 110, 190])
@@ -415,7 +420,41 @@ def generate_quotation_pdf(data):
     ]))
     story.append(plans_table)
     story.append(Spacer(1, 9))
-    
+
+    # Qué incluye el plan elegido, en lenguaje claro
+    plan_idx = min(max(data.get("selected_plan_index", 1), 0), len(plans) - 1)
+    detalle = [storage.split_item(i) for i in storage.plan_items(plans[plan_idx].get("features"))]
+    if any(d["title"] for d in detalle):
+        story.append(Paragraph(
+            "<b>Qué incluye este plan: %s — %s</b>" % (
+                escape(str(plans[plan_idx].get("num", "plan"))),
+                escape(str(plans[plan_idx].get("name", "")))
+            ), body_style))
+        story.append(Spacer(1, 4))
+
+        det_data = []
+        for d in detalle:
+            if d["title"]:
+                celda = "<b>%s</b><br/><font color='#64748B' size='7.5'>%s</font>" % (
+                    escape(d["title"]), escape(d["body"]))
+            else:
+                celda = "<b>%s</b>" % escape(d["body"])
+            det_data.append([Paragraph("✔", table_cell_style), Paragraph(celda, table_cell_style)])
+
+        det_table = Table(det_data, colWidths=[16, 524])
+        det_table.setStyle(TableStyle([
+            ('VALIGN', (0,0), (-1,-1), 'TOP'),
+            ('BOX', (0,0), (-1,-1), 1, BORDER_LIGHT),
+            ('INNERGRID', (0,0), (-1,-1), 0.5, BORDER_LIGHT),
+            ('TOPPADDING', (0,0), (-1,-1), 5),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+            ('LEFTPADDING', (0,0), (-1,-1), 7),
+            ('RIGHTPADDING', (0,0), (-1,-1), 7),
+            ('ROWBACKGROUNDS', (0,0), (-1,-1), [colors.white, BG_CARD]),
+        ]))
+        story.append(det_table)
+        story.append(Spacer(1, 9))
+
     # ==========================
     # 5. SERVICIOS ADICIONALES Y TARIFAS
     # ==========================
