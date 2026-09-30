@@ -99,6 +99,18 @@ def format_currency(value):
         return str(value)
 
 
+def _bullet_item(text) -> str:
+    """Viñeta con el título en negrita, igual que en la vista del cliente.
+    El texto de las plantillas puede traer <b> propio; en ese caso se respeta."""
+    raw = str(text or "").strip()
+    if "<b>" in raw:
+        return "• " + raw
+    item = storage.split_item(raw)
+    if item["title"]:
+        return "• <b>%s:</b> %s" % (escape(item["title"]), escape(item["body"]))
+    return "• " + escape(item["body"])
+
+
 def generate_quotation_pdf(data):
     """Genera la cotización ejecutiva con alta calidad estética y diseño profesional."""
     buffer = io.BytesIO()
@@ -466,7 +478,7 @@ def generate_quotation_pdf(data):
         "<b>Licenciamiento de Terceros y Cuentas:</b> Membresías de tiendas (Google Play $25 USD / Apple $99 USD/año).",
         "<b>Tiempos de Aprobación de Tiendas:</b> Los tiempos de validación de Google o Apple escapan al control del equipo de desarrollo."
     ])
-    excl_items = [[Paragraph(f"• {ex}", body_style)] for ex in exclusions]
+    excl_items = [[Paragraph(_bullet_item(ex), body_style)] for ex in exclusions]
     excl_table = Table(excl_items, colWidths=[540])
     excl_table.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,-1), BG_ROSE),
@@ -503,13 +515,6 @@ def generate_quotation_pdf(data):
                 Paragraph(c["label"], table_cell_style)
             ])
 
-        totales = storage.exclusion_cost_totals(data.get("exclusion_costs"))
-        if totales:
-            ref_data.append([
-                Paragraph("<b>Estimado total</b>", table_cell_style),
-                Paragraph("<b>" + " · ".join(t["label"] for t in totales) + "</b>", table_cell_style)
-            ])
-
         ref_table = Table(ref_data, colWidths=[350, 190])
         estilo_ref = [
             ('BACKGROUND', (0,0), (-1,0), PRIMARY_DARK),
@@ -523,9 +528,6 @@ def generate_quotation_pdf(data):
             ('RIGHTPADDING', (0,0), (-1,-1), 7),
             ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, BG_CARD]),
         ]
-        if totales:
-            estilo_ref.append(('BACKGROUND', (0,-1), (-1,-1), BG_CARD))
-            estilo_ref.append(('LINEABOVE', (0,-1), (-1,-1), 1, BORDER_LIGHT))
         ref_table.setStyle(TableStyle(estilo_ref))
         story.append(ref_table)
         story.append(Spacer(1, 9))
@@ -541,7 +543,7 @@ def generate_quotation_pdf(data):
         "<b>Documentación Faltante:</b> Requerimientos no contemplados en esta cotización se liquidarán bajo la bolsa de horas de desarrollo.",
         "<b>Garantía Técnica:</b> 30 días calendario de soporte y resolución de bugs sin costo tras la entrega formal."
     ])
-    lim_items = [[Paragraph(f"• {lim}", body_style)] for lim in limitations]
+    lim_items = [[Paragraph(_bullet_item(lim), body_style)] for lim in limitations]
     lim_table = Table(lim_items, colWidths=[540])
     lim_table.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,-1), BG_CARD),

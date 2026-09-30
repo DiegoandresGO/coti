@@ -559,32 +559,16 @@ def exclusion_cost_items(costs) -> list:
     return items
 
 
-def exclusion_cost_totals(costs) -> list:
-    """Suma los valores de referencia agrupados por moneda y periodicidad.
-    Nunca se mezclan monedas ni periodicidades distintas en un mismo total."""
-    grupos = {}
-    for it in exclusion_cost_items(costs):
-        if it["min"] <= 0 and it["max"] <= 0:
-            continue
-        clave = (it["currency"], it["period"])
-        g = grupos.setdefault(clave, {"min": 0.0, "max": 0.0})
-        g["min"] += it["min"]
-        g["max"] += it["max"]
-
-    orden = {"mes": 0, "anio": 1, "unico": 2}
-    salida = []
-    for (currency, period), g in sorted(grupos.items(), key=lambda k: (orden.get(k[0][1], 9), k[0][0])):
-        if g["min"] == g["max"]:
-            rango = _money(g["min"], currency)
-        else:
-            rango = _money(g["min"], currency) + " – " + _money(g["max"], currency)
-        salida.append({
-            "currency": currency,
-            "period": period,
-            "period_label": PERIOD_LABELS.get(period, ""),
-            "label": _cost_label(rango, currency, period),
-        })
-    return salida
+def split_item(text) -> dict:
+    """Separa "Título: descripción" para darle jerarquía al ítem.
+    Solo parte en el primer ':' y si el título es corto; si no, va todo como cuerpo."""
+    raw = str(text or "").strip()
+    if ":" in raw:
+        titulo, cuerpo = raw.split(":", 1)
+        titulo, cuerpo = titulo.strip(), cuerpo.strip()
+        if titulo and cuerpo and len(titulo) <= 60:
+            return {"title": titulo, "body": cuerpo}
+    return {"title": "", "body": raw}
 
 
 def plan_tax_details(plan_price: float, tax_rate: float, *args, **kwargs) -> dict:

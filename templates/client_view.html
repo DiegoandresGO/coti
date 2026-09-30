@@ -301,6 +301,78 @@
     .plan-scope-list li { position: relative; padding-left: 22px; line-height: 1.45; }
     .plan-scope-list li::before { content: "✔"; position: absolute; left: 0; top: 0; color: var(--emerald-600); font-weight: 800; }
     .plan-scope-grid { margin-top: 10px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 6px 20px; }
+
+    /* Listas de exclusiones y limitantes: título destacado + descripción */
+    .fact-list { list-style: none; margin: 0; padding: 0; }
+    .fact-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 11px 0;
+    }
+    .fact-item:first-child { padding-top: 0; }
+    .fact-item:last-child { padding-bottom: 0; }
+    .fact-item + .fact-item { border-top: 1px solid var(--slate-200); }
+    .fact-dot {
+      flex: 0 0 6px;
+      width: 6px;
+      height: 6px;
+      margin-top: 7px;
+      border-radius: 50%;
+      background: currentColor;
+      opacity: 0.5;
+    }
+    .fact-title {
+      display: block;
+      font-size: 13px;
+      font-weight: 800;
+      line-height: 1.35;
+      letter-spacing: -0.01em;
+    }
+    .fact-text {
+      display: block;
+      margin-top: 3px;
+      font-size: 13px;
+      line-height: 1.5;
+      opacity: 0.82;
+    }
+
+    /* Valores aproximados de referencia */
+    .ref-cost-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+    }
+    .ref-cost-item {
+      display: flex;
+      flex-direction: column;
+      padding: 14px 16px;
+      border: 1px solid var(--slate-200);
+      border-left: 3px solid var(--primary);
+      border-radius: var(--radius-sm);
+      background: var(--slate-50);
+    }
+    .ref-cost-concept {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--slate-600);
+      line-height: 1.35;
+    }
+    .ref-cost-value {
+      margin-top: 6px;
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--primary);
+      line-height: 1.25;
+    }
+    .ref-cost-note {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px dashed var(--slate-200);
+      font-size: 11.5px;
+      color: var(--slate-500);
+      line-height: 1.45;
+    }
     .detail-pill-box {
       background: #FFFFFF;
       border: 1px solid var(--slate-200);
@@ -432,7 +504,7 @@
                 <span class="plan-tax-badge badge-neto">Valor Neto (No responsable de IVA)</span>
               {% endif %}
             </div>
-            <div class="plan-support">✨ {{ p.support_hours }} de soporte incluidas</div>
+            <div class="plan-support">✨ Soporte incluido</div>
           </div>
 
           <div class="plan-features">
@@ -549,57 +621,19 @@
           <h2 class="section-title">Costos No Asumidos (Exclusiones)</h2>
         </div>
         <div class="alert-box alert-rose">
-          <ul class="clean-list">
+          <ul class="fact-list">
             {% for ex in data.exclusions %}
-            <li>• {{ ex }}</li>
+            {% set item = ex|split_item %}
+            <li class="fact-item">
+              <span class="fact-dot"></span>
+              <div>
+                {% if item.title %}<strong class="fact-title">{{ item.title }}</strong>{% endif %}
+                <span class="fact-text">{{ item.body }}</span>
+              </div>
+            </li>
             {% endfor %}
           </ul>
         </div>
-        {% set costos = exclusion_cost_items(data.exclusion_costs) if data.show_exclusion_costs != false else [] %}
-        {% if costos %}
-        {% set totales = exclusion_cost_totals(data.exclusion_costs) %}
-        <div style="margin-top: 16px;">
-          <h3 style="font-size: 13.5px; font-weight: 800; color: var(--slate-900); margin-bottom: 4px;">
-            Valores aproximados de referencia
-          </h3>
-          <p style="font-size: 12.5px; color: var(--slate-500); line-height: 1.5; margin-bottom: 10px;">
-            Para que puedas presupuestarlos. Son precios de terceros, no hacen parte de esta cotización
-            y pueden variar según el proveedor, el consumo y la TRM del día.
-          </p>
-          <div class="table-responsive">
-            <table class="data-table stack-mobile">
-              <thead>
-                <tr>
-                  <th>Concepto</th>
-                  <th style="width: 42%; text-align: right;">Valor aproximado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for c in costos %}
-                <tr>
-                  <td>
-                    <strong style="color: var(--slate-900);">{{ c.concept }}</strong>
-                    {% if c.note %}<br><span style="font-size: 12px; color: var(--slate-500);">{{ c.note }}</span>{% endif %}
-                  </td>
-                  <td style="text-align: right; white-space: nowrap; color: var(--slate-700); font-weight: 700;">{{ c.label }}</td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-          {% if totales %}
-          <div style="margin-top: 10px; font-size: 12.5px; color: var(--slate-600); line-height: 1.6;">
-            <strong style="color: var(--slate-900);">Estimado total:</strong>
-            {% for t in totales %}{{ t.label }}{% if not loop.last %} · {% endif %}{% endfor %}
-          </div>
-          {% endif %}
-        </div>
-        {% endif %}
-        {% if data.exclusions %}
-        <div style="margin-top: 14px; padding: 12px 16px; border-radius: 12px; background: rgba(16, 185, 129, 0.10); border: 1px solid rgba(16, 185, 129, 0.35); font-size: 13px; line-height: 1.5;">
-          Si lo deseas, también podemos apoyarte a cotizar y gestionar estos servicios (hosting, dominio, cuentas de tiendas y más) para que no tengas que preocuparte por nada.
-        </div>
-        {% endif %}
       </section>
 
       <!-- Limitantes -->
@@ -609,14 +643,47 @@
           <h2 class="section-title">Limitantes</h2>
         </div>
         <div class="alert-box alert-slate">
-          <ul class="clean-list">
+          <ul class="fact-list">
             {% for lim in data.limitations %}
-            <li>• {{ lim }}</li>
+            {% set item = lim|split_item %}
+            <li class="fact-item">
+              <span class="fact-dot"></span>
+              <div>
+                {% if item.title %}<strong class="fact-title">{{ item.title }}</strong>{% endif %}
+                <span class="fact-text">{{ item.body }}</span>
+              </div>
+            </li>
             {% endfor %}
           </ul>
         </div>
       </section>
     </div>
+
+    <!-- VALORES DE REFERENCIA (complemento del punto 04, a todo el ancho) -->
+    {% set costos = exclusion_cost_items(data.exclusion_costs) if data.show_exclusion_costs != false else [] %}
+    {% if costos %}
+    <section class="card">
+      <div class="section-header">
+        <span class="section-num">💡</span>
+        <h2 class="section-title">Valores Aproximados de Referencia</h2>
+      </div>
+      <p style="font-size: 13.5px; color: var(--slate-500); line-height: 1.55; margin-bottom: 18px;">
+        Para que puedas presupuestar los costos del punto 04. Son precios de terceros, no hacen parte
+        de esta cotización y pueden variar según el proveedor, el consumo y la TRM del día.
+      </p>
+
+      <div class="ref-cost-grid">
+        {% for c in costos %}
+        <div class="ref-cost-item">
+          <span class="ref-cost-concept">{{ c.concept }}</span>
+          <span class="ref-cost-value">{{ c.label }}</span>
+          {% if c.note %}<p class="ref-cost-note">{{ c.note }}</p>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+
+    </section>
+    {% endif %}
 
     <!-- 06. FORMAS DE PAGO Y LIQUIDACIÓN (RECALCULABLE DINÁMICAMENTE) -->
     <section class="card" id="seccionLiquidacion">
