@@ -546,7 +546,7 @@
             <div class="detail-icon">⏱️</div>
             <div>
               <div style="font-size: 11.5px; color: var(--slate-500); font-weight: 600;">Soporte Técnico</div>
-              <strong id="detailPlanHours" style="color: var(--emerald-700); font-size: 13.5px;">15 horas incluidas</strong>
+              <strong id="detailPlanHours" style="color: var(--emerald-700); font-size: 13.5px;">Incluido</strong>
             </div>
           </div>
           <div class="detail-pill-box">
@@ -698,7 +698,7 @@
         <h2 class="section-title">Condiciones Comerciales y Formas de Pago</h2>
       </div>
       <p style="font-size: 13.5px; color: var(--slate-600); margin-bottom: 14px;">
-        Liquidación calculada sobre el plan: <strong id="summaryPlanLabel">Opción 2 — Plan Estándar Profesional</strong> (<span id="summaryPlanHours">15 horas de soporte incluidas</span>).
+        Liquidación calculada sobre el plan: <strong id="summaryPlanLabel">Opción 2 — Plan Estándar Profesional</strong> (<span id="summaryPlanHours">soporte incluido</span>).
       </p>
 
       <div class="table-responsive" style="margin-bottom: 20px;">
@@ -1124,7 +1124,7 @@
       // 2. Actualizar Tarjeta de Desglose Específico
       document.getElementById('detailPlanTitle').textContent = plan.num + ' — ' + plan.name;
       document.getElementById('detailPlanPrice').textContent = formatCOP(plan.price);
-      document.getElementById('detailPlanHours').textContent = plan.support_hours + ' incluidas';
+      document.getElementById('detailPlanHours').textContent = 'Incluido';
       const descList = document.getElementById('detailPlanDesc');
       descList.innerHTML = '';
       (Array.isArray(plan.features) ? plan.features
@@ -1198,7 +1198,7 @@
       const netoVal = totalVal - retentions.reduce((a, r) => a + r.value, 0);
 
       document.getElementById('summaryPlanLabel').textContent = plan.num + ' — ' + plan.name;
-      document.getElementById('summaryPlanHours').textContent = plan.support_hours + ' de soporte incluidas';
+      document.getElementById('summaryPlanHours').textContent = 'soporte incluido';
       
       document.getElementById('rowAdvVal').textContent = formatCOP(advVal);
       document.getElementById('rowMidVal').textContent = formatCOP(midVal);

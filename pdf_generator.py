@@ -372,9 +372,8 @@ def generate_quotation_pdf(data):
     for p in plans:
         is_rec = p.get("is_recommended", False)
         badge_text = "<font color='#4F46E5'><b>★ RECOMENDADO</b></font><br/>" if is_rec else ""
-        hours_val = p.get('support_hours', 'Incluido')
-        if "incluidas" not in str(hours_val).lower() and "incluido" not in str(hours_val).lower():
-            hours_val = f"{hours_val} incluidas"
+        # Sin numero de horas: el soporte se comunica como incluido y ya
+        hours_val = "Incluido"
 
         price_val = p.get('price', 0)
         tinfo = storage.plan_tax_details(price_val, tax_rate, price_inc)
