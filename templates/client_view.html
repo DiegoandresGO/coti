@@ -306,6 +306,9 @@
     .scope-title { display: block; font-size: 13.5px; font-weight: 700; color: var(--slate-900); line-height: 1.35; }
     .scope-text { display: block; margin-top: 2px; font-size: 12.5px; color: var(--slate-500); line-height: 1.5; }
 
+    /* Cuando solo sobrevive una de las dos tarjetas, ocupa la fila completa */
+    .grid-2.is-single { grid-template-columns: 1fr; }
+
     /* Listas de exclusiones y limitantes: título destacado + descripción */
     .fact-list { list-style: none; margin: 0; padding: 0; }
     .fact-item {
@@ -613,7 +616,7 @@
     {% endif %}
 
     <!-- 05 & 06. EXCLUSIONES Y LIMITANTES -->
-    <div class="grid-2">
+    <div class="grid-2" id="exclusionsLimitsRow">
       <!-- Exclusiones -->
       <section class="card" id="exclusionsCard">
         <div class="section-header">
@@ -1072,7 +1075,7 @@
     // Una línea sin planes marcados aplica a todos; si no queda ninguna, se oculta la tarjeta.
     function filtrarPorPlan(listId, cardId, index) {
       const lista = document.getElementById(listId);
-      if (!lista) return;
+      if (!lista) return false;
       let visibles = 0;
       lista.querySelectorAll('.fact-item').forEach(li => {
         const raw = (li.dataset.plans || '').trim();
@@ -1082,6 +1085,7 @@
       });
       const card = document.getElementById(cardId);
       if (card) card.hidden = visibles === 0;
+      return visibles > 0;
     }
 
     // Espejo de storage.split_item: separa "Título: explicación" del alcance de cada plan
@@ -1148,8 +1152,12 @@
       document.getElementById('detailPillsRow').hidden = !(hayMovil || hayGarantia);
 
       // 1.c Exclusiones y limitantes que aplican a este plan
-      filtrarPorPlan('exclusionsList', 'exclusionsCard', index);
-      filtrarPorPlan('limitationsList', 'limitationsCard', index);
+      const hayExclusiones = filtrarPorPlan('exclusionsList', 'exclusionsCard', index);
+      const hayLimitantes = filtrarPorPlan('limitationsList', 'limitationsCard', index);
+      // Si queda una sola tarjeta, ocupa todo el ancho en vez de dejar media fila vacía
+      const fila = document.getElementById('exclusionsLimitsRow');
+      fila.classList.toggle('is-single', hayExclusiones !== hayLimitantes);
+      fila.hidden = !hayExclusiones && !hayLimitantes;
       const descList = document.getElementById('detailPlanDesc');
       descList.innerHTML = '';
       (Array.isArray(plan.features) ? plan.features
