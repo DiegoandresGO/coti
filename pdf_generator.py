@@ -618,15 +618,24 @@ def generate_quotation_pdf(data):
     retentions = totals["retentions"]
     price_includes_tax = totals.get("price_includes_tax", False)
     
-    adv_p = data.get("adv_pct", 50)
-    mid_p = data.get("mid_pct", 30)
-    fin_p = data.get("fin_pct", 20)
-    
-    payment_terms = data.get("payment_terms", [
-        (f"{adv_p}% Anticipo", "Al momento de la firma y aprobación de la propuesta comercial.", base_val * (adv_p / 100.0)),
-        (f"{mid_p}% Hito Intermedio", "Contra entrega de la versión Web funcional conectada al backend.", base_val * (mid_p / 100.0)),
-        (f"{fin_p}% Entrega Final", "Contra entrega de la APK compilada, despliegue final y accesos.", base_val * (fin_p / 100.0))
-    ])
+    payment_terms = []
+    milestones = data.get("payment_milestones")
+    if milestones and len(milestones) > 0:
+        for ms in milestones:
+            pct = float(ms.get("pct", 0))
+            if pct > 0:
+                payment_terms.append(
+                    (f"{ms.get('pct')}% {ms.get('name', 'Hito')}", ms.get("desc", ""), base_val * (pct / 100.0))
+                )
+    else:
+        adv_p = data.get("adv_pct", 50)
+        mid_p = data.get("mid_pct", 30)
+        fin_p = data.get("fin_pct", 20)
+        payment_terms = [
+            (f"{adv_p}% Anticipo", "Al momento de la firma y aprobación de la propuesta comercial.", base_val * (adv_p / 100.0)),
+            (f"{mid_p}% Hito Intermedio", "Contra entrega de la versión Web funcional conectada al backend.", base_val * (mid_p / 100.0)),
+            (f"{fin_p}% Entrega Final", "Contra entrega de la APK compilada, despliegue final y accesos.", base_val * (fin_p / 100.0))
+        ]
     
     pay_rows = [
         [

@@ -707,22 +707,24 @@
               <th style="width: 25%;">Valor (COP)</th>
             </tr>
           </thead>
-          <tbody>
-            <tr>
-              <td><strong>{{ data.adv_pct }}% Anticipo</strong></td>
-              <td style="color: var(--slate-600);">Al momento de la firma y aprobación de la propuesta comercial.</td>
-              <td><strong id="rowAdvVal">$ 0 COP</strong></td>
-            </tr>
-            <tr>
-              <td><strong>{{ data.mid_pct }}% Hito Web</strong></td>
-              <td style="color: var(--slate-600);">Contra entrega de la versión Web funcional conectada al backend centralizado.</td>
-              <td><strong id="rowMidVal">$ 0 COP</strong></td>
-            </tr>
-            <tr>
-              <td><strong>{{ data.fin_pct }}% Entrega Final</strong></td>
-              <td style="color: var(--slate-600);">Contra entrega del archivo APK compilado, despliegue operativo y accesos maestros.</td>
-              <td><strong id="rowFinVal">$ 0 COP</strong></td>
-            </tr>
+          <tbody id="paymentMilestonesBody">
+            {% set milestones = data.payment_milestones %}
+            {% if not milestones or milestones|length == 0 %}
+              {% set milestones = [
+                {'name': 'Anticipo', 'pct': data.adv_pct|default(50), 'desc': 'Al momento de la firma y aprobación de la propuesta comercial.'},
+                {'name': 'Hito Web', 'pct': data.mid_pct|default(30), 'desc': 'Contra entrega de la versión funcional conectada al backend centralizado.'},
+                {'name': 'Entrega Final', 'pct': data.fin_pct|default(20), 'desc': 'Contra entrega de la versión final, despliegue y accesos maestros.'}
+              ] %}
+            {% endif %}
+            {% for ms in milestones %}
+              {% if ms.pct|float > 0 %}
+              <tr>
+                <td><strong>{{ ms.pct }}% {{ ms.name }}</strong></td>
+                <td style="color: var(--slate-600);">{{ ms.desc }}</td>
+                <td><strong class="dynamic-ms-val" data-pct="{{ ms.pct }}">$ 0 COP</strong></td>
+              </tr>
+              {% endif %}
+            {% endfor %}
             <tr>
               <td><strong>Subtotal Desarrollo</strong></td>
               <td>Valor neto de desarrollo de software</td>
@@ -1215,9 +1217,12 @@
         }
       }
 
-      const advVal = baseVal * (parseFloat(quoteData.adv_pct || 50) / 100.0);
-      const midVal = baseVal * (parseFloat(quoteData.mid_pct || 30) / 100.0);
-      const finVal = baseVal * (parseFloat(quoteData.fin_pct || 20) / 100.0);
+      // Actualizar hitos dinámicos
+      document.querySelectorAll('.dynamic-ms-val').forEach(el => {
+        const pct = parseFloat(el.getAttribute('data-pct')) || 0;
+        const msVal = baseVal * (pct / 100.0);
+        el.textContent = formatCOP(msVal);
+      });
 
       // Retenciones (se descuentan del total de la factura)
       const retentions = [];
@@ -1232,10 +1237,6 @@
 
       document.getElementById('summaryPlanLabel').textContent = plan.num + ' — ' + plan.name;
       document.getElementById('summaryPlanHours').textContent = 'soporte incluido';
-      
-      document.getElementById('rowAdvVal').textContent = formatCOP(advVal);
-      document.getElementById('rowMidVal').textContent = formatCOP(midVal);
-      document.getElementById('rowFinVal').textContent = formatCOP(finVal);
       document.getElementById('rowSubtotalVal').textContent = formatCOP(baseVal);
       
       const rowIva = document.getElementById('rowIvaVal');

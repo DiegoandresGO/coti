@@ -384,18 +384,14 @@
             </div>
           </div>
 
-          <div class="grid-3" style="margin-top: 10px;">
-            <div class="form-group">
-              <label class="form-label">% Anticipo</label>
-              <input type="number" id="adv_pct" class="form-control" value="50" min="0" max="100">
+          <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--slate-200);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <h3 style="font-size: 14px; font-weight: 700; color: var(--slate-800); margin: 0;">Hitos de Pago (% del Total)</h3>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="addPaymentMilestone()">➕ Agregar Hito</button>
             </div>
-            <div class="form-group">
-              <label class="form-label">% Hito Web</label>
-              <input type="number" id="mid_pct" class="form-control" value="30" min="0" max="100">
-            </div>
-            <div class="form-group">
-              <label class="form-label">% Entrega Final</label>
-              <input type="number" id="fin_pct" class="form-control" value="20" min="0" max="100">
+            <p style="font-size: 12.5px; color: var(--slate-500); margin-bottom: 12px;">Agrega los hitos y porcentajes que cobrarás al cliente. <span id="milestoneSumWarning" style="color: var(--rose-600); font-weight: bold;" hidden>⚠️ La suma debe ser exactamente 100%</span></p>
+            <div id="paymentMilestonesContainer" style="display: flex; flex-direction: column; gap: 10px;">
+              <!-- Renderizado dinámico de los hitos -->
             </div>
           </div>
 
@@ -575,9 +571,15 @@
       renderExclusionCosts(data.exclusion_costs || []);
       updateExclusionCostsUI();
 
-      document.getElementById('adv_pct').value = data.adv_pct || 50;
-      document.getElementById('mid_pct').value = data.mid_pct || 30;
-      document.getElementById('fin_pct').value = data.fin_pct || 20;
+      let milestones = data.payment_milestones;
+      if (!milestones || milestones.length === 0) {
+        milestones = [
+          { name: "Anticipo", pct: data.adv_pct || 50, desc: "Al momento de la firma y aprobación de la propuesta" },
+          { name: "Hito Web", pct: data.mid_pct || 30, desc: "Contra entrega de la versión funcional conectada al backend" },
+          { name: "Entrega Final", pct: data.fin_pct || 20, desc: "Contra entrega de la versión final, despliegue y accesos" }
+        ].filter(m => m.pct > 0);
+      }
+      renderPaymentMilestones(milestones);
 
       if ((data.tax_rate || 0) > 0) {
         document.getElementById('tax_type_select').value = 'iva19';
@@ -866,6 +868,77 @@
       autoGrowAll(container);
     }
 
+    // ---- Hitos de Pago Dinámicos ----
+    function readPaymentMilestonesFromForm() {
+      return [...document.querySelectorAll('.milestone-card')].map(card => {
+        return {
+          name: card.querySelector('.ms-name').value.trim(),
+          pct: parseFloat(card.querySelector('.ms-pct').value) || 0,
+          desc: card.querySelector('.ms-desc').value.trim()
+        };
+      });
+    }
+
+    function checkMilestoneSum() {
+      const ms = readPaymentMilestonesFromForm();
+      const sum = ms.reduce((acc, m) => acc + m.pct, 0);
+      const warn = document.getElementById('milestoneSumWarning');
+      if (warn) {
+        if (Math.abs(sum - 100) > 0.01) {
+          warn.hidden = false;
+          warn.textContent = `⚠️ La suma es ${sum.toFixed(1)}%, debe ser exactamente 100%`;
+        } else {
+          warn.hidden = true;
+        }
+      }
+    }
+
+    function addPaymentMilestone() {
+      const ms = readPaymentMilestonesFromForm();
+      ms.push({ name: '', pct: 0, desc: '' });
+      renderPaymentMilestones(ms);
+    }
+
+    function removePaymentMilestone(idx) {
+      const ms = readPaymentMilestonesFromForm();
+      ms.splice(idx, 1);
+      renderPaymentMilestones(ms);
+    }
+
+    function renderPaymentMilestones(milestones) {
+      const container = document.getElementById('paymentMilestonesContainer');
+      if (!container) return;
+      if (!milestones || !milestones.length) milestones = [{ name: 'Anticipo', pct: 100, desc: '' }];
+      container.innerHTML = '';
+      milestones.forEach((m, i) => {
+        const div = document.createElement('div');
+        div.className = 'card milestone-card';
+        div.style.padding = '12px 14px';
+        div.style.background = 'var(--slate-50)';
+        div.innerHTML = `
+          <div style="display: flex; gap: 10px; align-items: flex-start; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 150px;">
+              <label class="form-label">Nombre del Hito</label>
+              <input type="text" class="form-control ms-name" value="${escapeAttr(m.name)}" placeholder="Ej. Anticipo">
+            </div>
+            <div style="flex: 0 0 100px;">
+              <label class="form-label">Porcentaje (%)</label>
+              <input type="number" class="form-control ms-pct" value="${m.pct}" min="0" max="100" step="0.01" oninput="checkMilestoneSum()">
+            </div>
+            <div style="flex: 2; min-width: 200px;">
+              <label class="form-label">Descripción o condición de pago</label>
+              <input type="text" class="form-control ms-desc" value="${escapeAttr(m.desc)}" placeholder="Al momento de firmar">
+            </div>
+            <div style="flex: 0 0 40px; display: flex; align-items: flex-end;">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="removePaymentMilestone(${i})" style="color: var(--rose-700); height: 38px;">🗑️</button>
+            </div>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+      checkMilestoneSum();
+    }
+
     function collectData() {
       // Planes
       const plans = readPlansFromForm();
@@ -919,9 +992,7 @@
         rete_iva_pct: parseFloat(document.getElementById('rete_iva_pct').value) || 0,
         rete_ica_enabled: document.getElementById('rete_ica_enabled').checked,
         rete_ica_pm: parseFloat(document.getElementById('rete_ica_pm').value) || 0,
-        adv_pct: parseFloat(document.getElementById('adv_pct').value) || 50,
-        mid_pct: parseFloat(document.getElementById('mid_pct').value) || 30,
-        fin_pct: parseFloat(document.getElementById('fin_pct').value) || 20
+        payment_milestones: readPaymentMilestonesFromForm()
       };
     }
 
